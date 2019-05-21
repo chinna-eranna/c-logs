@@ -3,11 +3,49 @@ package utils
 import (
 	"github.com/rjeczalik/notify"
 	log "github.com/Sirupsen/logrus"
+	"github.com/mitchellh/go-homedir"
 	"io"
 	"os"
 	"fmt"
+	"io/ioutil"
+	"strings"
+	"path/filepath"
 	"time"
 	"compress/gzip")
+
+func EnsureAppHomeDir(){
+	homeDir, _ := homedir.Dir()
+	log.Info("Home directory of user ", homeDir)
+	appDir := filepath.Join(homeDir, ".v-logs")
+	os.MkdirAll(appDir, os.ModePerm)
+}
+
+func GetAppHomeDir()(string){
+	homeDir, _ := homedir.Dir()
+	appDir := filepath.Join(homeDir, ".v-logs")
+	return appDir
+}
+
+func FindLatestFile(dir string, filePrefix string)(string, error){
+	filesCh, err  := ioutil.ReadDir(dir)
+	if err != nil{
+		log.Info("findLatestFile():Error while listing files in directory", dir, err)
+		return "", err
+	}
+	
+	var latestFile string
+	var latestFileModTime int64
+	for _, f := range filesCh {
+		if strings.Index(f.Name(), filePrefix) == 0 {
+			if f.ModTime().Unix() > latestFileModTime{
+				latestFile = f.Name();
+				latestFileModTime = f.ModTime().Unix()
+			}
+		}
+	}
+	log.Info("Latest file in directory ", dir, " is ", latestFile)
+	return latestFile, nil
+}
 
 func GunzipFile(gzFilePath, dstFilePath string) (int64, error) {
 	

@@ -19,7 +19,6 @@ func getLogs(w http.ResponseWriter, r *http.Request){
 	log.Println("Invoked /v1/logs API")
 	monitoringFile := logs.Files["test"]
 	logMessages := monitoringFile.GetLogs()
-	log.Println(logMessages)
 	for _,line := range logMessages {
 		fmt.Fprintf(w, line)
 	}

@@ -6,8 +6,6 @@ import (
 import (
 	"github.com/rjeczalik/notify"
 	log "github.com/Sirupsen/logrus"
-	"github.com/mitchellh/go-homedir"
-	"io/ioutil"
 	"golang.org/x/sys/unix"
 	"strings"
 	"path/filepath"
@@ -30,6 +28,7 @@ type MonitoringLogFile struct{
 var Files map[string]*MonitoringLogFile
 
 func Init(){
+	utils.EnsureAppHomeDir()
 	Files = make(map[string]*MonitoringLogFile)
 	_,err := MonitorLogPath("/test/file")
 	if(err != nil){
@@ -37,29 +36,29 @@ func Init(){
 	}
 }
 
-func MonitorLogPath(logPath  string)(MonitoringLogFile, error){
+func MonitorLogPath(logPath  string) (MonitoringLogFile, error){
 	log.Info("Starting monitoring log path ", logPath)
 	dir,monFilePrefix := filepath.Split(logPath)
-	latestFile,err := findLatestFile(dir, monFilePrefix)
+	latestFile,err := utils.FindLatestFile(dir, monFilePrefix)
 	if(err != nil){
 		return MonitoringLogFile{}, err
 	}
 
-	quitCh := make chan(chan string 1)
+	quitCh := make(chan string, 1)
 	linesReadCh := make(chan string, 1000)
 	linesConsumeTracker := make(chan int64, 1000)
-	MonitoringLogFile := MonitoringLogFile{dir, latestFile, linesReadCh, 0, "", linesConsumeTracker, 0}
-	Files["test"] = &MonitoringLogFile
+	monitoringLogFile := MonitoringLogFile{dir, latestFile, linesReadCh, 0, "", linesConsumeTracker, 0}
+	Files["test"] = &monitoringLogFile
 	
-	go MonitoringLogFile.readLogFile(quitCh)
-	go MonitoringLogFile.monitorDir(quitCh)
+	go monitoringLogFile.readLogFile(quitCh)
+	go monitoringLogFile.monitorDir(quitCh)
 	log.Info("Started monitoring log path ", logPath);
 
-	return MonitoringLogFile, nil	
+	return monitoringLogFile, nil	
 }
 
-func (MonitoringLogFile *MonitoringLogFile) readLogFile(quitCh){
-	absFilepath := filepath.Join(MonitoringLogFile.Directory, MonitoringLogFile.FileName)
+func (monitoringLogFile *MonitoringLogFile) readLogFile(quitCh chan string){
+	absFilepath := filepath.Join(monitoringLogFile.Directory, monitoringLogFile.FileName)
 	log.Info("Start reading and buffering log file ", absFilepath)
 	
 	file,err := os.Open(absFilepath)
@@ -71,159 +70,149 @@ func (MonitoringLogFile *MonitoringLogFile) readLogFile(quitCh){
 	}
 
 	reader := bufio.NewReader(file)
-	var linesConsumed int64
 	compressedFileBeingRead := false
 	for{
-		if !compressedFileBeingRead && len(MonitoringLogFile.CompressedFile) > 0 {
-			log.Info("Opening Compressed file now")
-			compressedFileBeingRead = true;
-			file,err := os.Open(MonitoringLogFile.CompressedFile)
-			defer file.Close()
-			if err != nil {
-				log.Info("Got error while opening the compressed file ", absFilepath, err)
-				quitCh <- "quit"
-				return
-			}
-			reader := bufio.NewReader(file)
-			log.Info("Discarding ", MonitoringLogFile.Offset, " bytes from compressed file")
-			discarded,err  := reader.Discard(MonitoringLogFile.Offset)
+		if !compressedFileBeingRead && len(monitoringLogFile.CompressedFile) > 0 {
+			file, err := monitoringLogFile.switchToCompressedFile(quitCh)
 			if err != nil{
-				log.Info("Could not seek into the compressed file ", MonitoringLogFile.CompressedFile)
-				quitCh <- "quit"
 				return
 			}
-			log.Info("Succeessfully discarded bytes ", discarded, " from ", MonitoringLogFile.CompressedFile)
+			compressedFileBeingRead = true
+			defer file.Close()
 		}
 
 		bytes,err := reader.ReadBytes('\n');
-		if bytes != nil && len(bytes) > 0{
-			MonitoringLogFile.Lines <- string(bytes)
-			MonitoringLogFile.Offset += len(bytes)
-			MonitoringLogFile.LinesProduced += 1
-		}
+		monitoringLogFile.addLine(bytes)
 		if err != nil{
-			log.Info("Error: ", err);
+			log.Error("Error while reading the monitoring file: ", absFilepath, err);
 			if err == io.EOF{
 				time.Sleep(2000 * time.Millisecond)
 			}else{
 				break
 			}
 		}
-		
-		for MonitoringLogFile.LinesProduced > 50{
-			log.Info("Lines Produced Before consuming ", MonitoringLogFile.LinesProduced)
-			log.Info("Offset ", MonitoringLogFile.Offset)
-			linesConsumed = <- MonitoringLogFile.LinesConsumed
-			MonitoringLogFile.LinesProduced -= linesConsumed
-			log.Info("Lines Produced After consuming ", MonitoringLogFile.LinesProduced)
-			<- time.After(10 * time.Second)
-		}
+		monitoringLogFile.waitForConsuming()
 	}
 }
 
-func (MonitoringLogFile *MonitoringLogFile) GetLogs() []string{
+func (monitoringLogFile *MonitoringLogFile) GetLogs() []string{
 	var linesCount int64
 	var linesRead []string
 	var timeout bool
 	for linesCount < 50 && !timeout{
 		select{
-		case nextLine := <- MonitoringLogFile.Lines:
+		case nextLine := <- monitoringLogFile.Lines:
 			linesRead = append(linesRead, nextLine)
 			linesCount++
 		case <- time.After(1 * time.Second):
 			timeout = true
-			log.Info("Timeout in getlogs")
 			break
 		}
 	}
 	log.Info("Consumed ", linesCount, " lines")
-	MonitoringLogFile.LinesConsumed <- linesCount
+	monitoringLogFile.LinesConsumed <- linesCount
 	return linesRead
 }
 
-func (MonitoringLogFile *MonitoringLogFile) monitorDir(quitCh chan){
-	moves := make(map[uint32]struct{
-		From string
-		To string
-	})
-	dirMonitorCh := make(chan notify.EventInfo, 10)
-	if err := notify.Watch(MonitoringLogFile.Directory, dirMonitorCh, notify.Create, notify.Remove, notify.InMovedFrom, notify.InMovedTo); err != nil {
-		log.Info("Error while watching for create/remove/rename event for directory ", MonitoringLogFile.Directory)
-	}else{
-		log.Info("Watching  directory: ", MonitoringLogFile.Directory);
+func (monitoringLogFile *MonitoringLogFile) addLine(bytes []byte){
+	if len(bytes) > 0{
+		monitoringLogFile.Lines <- string(bytes)
+		monitoringLogFile.Offset += len(bytes)
+		monitoringLogFile.LinesProduced += 1
 	}
-	log.Info("Starting the monitoring for", MonitoringLogFile.Directory)
+}
+
+func (monitoringLogFile *MonitoringLogFile) waitForConsuming(){
+	for monitoringLogFile.LinesProduced > 50{
+		log.Info("Lines available for consuming ", monitoringLogFile.LinesProduced)
+		log.Info("Offset ", monitoringLogFile.Offset)
+		linesConsumed := <- monitoringLogFile.LinesConsumed
+		monitoringLogFile.LinesProduced -= linesConsumed
+		log.Info("Lines available After consuming ", monitoringLogFile.LinesProduced)
+	}
+}
+
+func (monitoringLogFile *MonitoringLogFile) switchToCompressedFile(quitCh chan string)(*os.File, error){
+	log.Info("Opening Compressed file now")
+	file,err := os.Open(monitoringLogFile.CompressedFile)
+	if err != nil {
+		log.Info("Got error while opening the compressed file ", monitoringLogFile.CompressedFile, err)
+		quitCh <- "quit"
+		return nil,err
+	}
+	reader := bufio.NewReader(file)
+	log.Info("Discarding ", monitoringLogFile.Offset, " bytes from compressed file")
+	discarded,err  := reader.Discard(monitoringLogFile.Offset)
+	if err != nil{
+		log.Info("Could not seek into the compressed file ", monitoringLogFile.CompressedFile)
+		quitCh <- "quit"
+		defer file.Close()
+		return nil,err
+	}
+	log.Info("Succeessfully discarded bytes ", discarded, " from ", monitoringLogFile.CompressedFile)
+	return file, nil
+}
+
+func (monitoringLogFile *MonitoringLogFile) monitorDir(quitCh chan string){
+	dirMonitorCh := make(chan notify.EventInfo, 10)
+	if err := notify.Watch(monitoringLogFile.Directory, dirMonitorCh, notify.Create, notify.Remove, notify.InMovedFrom, notify.InMovedTo); err != nil {
+		log.Info("Error while watching for create/remove/rename event for directory ", monitoringLogFile.Directory)
+	}else{
+		log.Info("Watching  directory: ", monitoringLogFile.Directory);
+	}
+	
 	for{
-		var ei EventInfo
+		var ei notify.EventInfo
 		select {
 		case <- quitCh:
 			log.Warn("Routine asked to quit");
 			return
 		case ei = <- dirMonitorCh:
-		}
-
-		switch ei.Event(){
-		case notify.Create:
-			log.Info("Created: ", ei.Path())
-			dirName,fileName := filepath.Split(ei.Path())
-			if strings.HasSuffix(fileName, ".gz") {
-				if  len(MonitoringLogFile.CompressedFile) > 0 {
-					continue;
-				}
-				log.Info("Got compressed file ", filepath.Join(dirName, fileName))
-				homeDir, _ := homedir.Dir()
-				log.Info("Home directory of user ", homeDir)
-				appDir := filepath.Join(homeDir, ".v-logs")
-				os.MkdirAll(appDir, os.ModePerm)
-				uncompressedFilePath := filepath.Join(appDir, strings.TrimSuffix(fileName, ".gz"))
-				utils.GunzipFile(ei.Path(), uncompressedFilePath)
-				MonitoringLogFile.CompressedFile = uncompressedFilePath
-				log.Info("MonitoringLogFile struct compressed file path ", MonitoringLogFile.CompressedFile,  " offset: ", MonitoringLogFile.Offset)
-			}
-			
-		case notify.Remove:
-			log.Info("Removed: ", ei.Path())
-		case notify.InMovedFrom:
-			fallthrough
-		case notify.InMovedTo:
-			cookie := ei.Sys().(*unix.InotifyEvent).Cookie
-			info := moves[cookie]
-			if ei.Event() == notify.InMovedFrom{
-				info.From = ei.Path()
-			}else{
-				info.To = ei.Path()
-			}
-			moves[cookie] = info
-			if info.From != "" && info.To != ""{
-				log.Info("Renamed: " , info.From + " -> ", info.To)
-				delete(moves, cookie)
-				_,fileRenamed := filepath.Split(ei.Path())
-				if strings.Index(fileRenamed, "dummy") >= 0{
-					log.Info("Renamed file matched with watching log pattern")
-				}
-			}
+			monitoringLogFile.handleDirChangeNotification(ei)
 		}
 	}
 }
 
-
-func findLatestFile(dir string, filePrefix string)(string, error){
-	filesCh, err  := ioutil.ReadDir(dir)
-	if err != nil{
-		log.Info("findLatestFile():Error while listing files in directory", dir, err)
-		return "", err
-	}
+func (monitoringLogFile *MonitoringLogFile) handleDirChangeNotification(ei notify.EventInfo){
+	moves := make(map[uint32]struct{
+		From string
+		To string
+	})
 	
-	var latestFile string
-	var latestFileModTime int64
-	for _, f := range filesCh {
-		if strings.Index(f.Name(), filePrefix) == 0 {
-			if f.ModTime().Unix() > latestFileModTime{
-				latestFile = f.Name();
-				latestFileModTime = f.ModTime().Unix()
+	switch ei.Event(){
+	case notify.Create:
+		log.Info("Directory Change Notification - Created file : ", ei.Path())
+		dirName,fileName := filepath.Split(ei.Path())
+		if strings.HasSuffix(fileName, ".gz") {
+			if  len(monitoringLogFile.CompressedFile) > 0 {
+				return;
+			}
+			log.Info("Got compressed file ", filepath.Join(dirName, fileName))
+			uncompressedFilePath := filepath.Join(utils.GetAppHomeDir(), strings.TrimSuffix(fileName, ".gz"))
+			utils.GunzipFile(ei.Path(), uncompressedFilePath)
+			monitoringLogFile.CompressedFile = uncompressedFilePath
+		}
+		
+	case notify.Remove:
+		log.Info("Removed: ", ei.Path())
+	case notify.InMovedFrom:
+		fallthrough
+	case notify.InMovedTo:
+		cookie := ei.Sys().(*unix.InotifyEvent).Cookie
+		info := moves[cookie]
+		if ei.Event() == notify.InMovedFrom{
+			info.From = ei.Path()
+		}else{
+			info.To = ei.Path()
+		}
+		moves[cookie] = info
+		if info.From != "" && info.To != ""{
+			log.Info("Renamed: " , info.From + " -> ", info.To)
+			delete(moves, cookie)
+			_,fileRenamed := filepath.Split(ei.Path())
+			if strings.Index(fileRenamed, "dummy") >= 0{
+				log.Info("Renamed file matched with watching log pattern")
 			}
 		}
 	}
-	log.Info("Latest file in directory ", dir, " is ", latestFile)
-	return latestFile, nil
 }
