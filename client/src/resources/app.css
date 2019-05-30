@@ -1,0 +1,12 @@
+.row { 
+    flex-direction: row;
+  }
+.col { 
+    flex-direction: column;
+  }
+
+.mar-top-10r {
+    margin-top: 100px;
+    background-color: red
+}
+   

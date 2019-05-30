@@ -8,9 +8,9 @@ import (
 	"os"
 	"fmt"
 	"io/ioutil"
-	"strings"
 	"path/filepath"
 	"time"
+	"regexp"
 	"compress/gzip")
 
 func EnsureAppHomeDir(){
@@ -26,17 +26,22 @@ func GetAppHomeDir()(string){
 	return appDir
 }
 
-func FindLatestFile(dir string, filePrefix string)(string, error){
+func FindLatestFile(dir string, filePattern string)(string, error){
 	filesCh, err  := ioutil.ReadDir(dir)
 	if err != nil{
-		log.Info("findLatestFile():Error while listing files in directory", dir, err)
+		log.Error("findLatestFile():Error while listing files in directory", dir, err)
 		return "", err
 	}
 	
 	var latestFile string
 	var latestFileModTime int64
 	for _, f := range filesCh {
-		if strings.Index(f.Name(), filePrefix) == 0 {
+		fileMatch, regexErr := regexp.MatchString(filePattern, f.Name())
+		if regexErr != nil  {
+			log.Error("findLatestFile():Error while matching the pattern ", filePattern, " with file ", f.Name(), " -- Error:  ", regexErr)
+			return "", regexErr
+		}
+		if  fileMatch {
 			if f.ModTime().Unix() > latestFileModTime{
 				latestFile = f.Name();
 				latestFileModTime = f.ModTime().Unix()

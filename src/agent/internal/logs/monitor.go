@@ -1,7 +1,5 @@
 package logs
 
-import (
-	"agent/internal/utils")
 
 import (
 	"github.com/rjeczalik/notify"
@@ -12,7 +10,9 @@ import (
 	"os"
 	"bufio"
 	"io"
-	"time")
+	"time"
+	"agent/internal/utils"
+)
 
 type MonitoringLogFile struct{
 	Directory string
@@ -24,22 +24,27 @@ type MonitoringLogFile struct{
 
 	LinesConsumed chan int64
 	LinesProduced int64
+
+	quitCh chan string
 }
 var Files map[string]*MonitoringLogFile
 
 func Init(){
 	utils.EnsureAppHomeDir()
 	Files = make(map[string]*MonitoringLogFile)
+	/*
 	_,err := MonitorLogPath("/test/file")
 	if(err != nil){
 		log.Fatal("Could not monitor logpath")
 	}
+	*/
 }
 
-func MonitorLogPath(logPath  string) (MonitoringLogFile, error){
-	log.Info("Starting monitoring log path ", logPath)
-	dir,monFilePrefix := filepath.Split(logPath)
-	latestFile,err := utils.FindLatestFile(dir, monFilePrefix)
+func MonitorLogPath(logDirectory utils.LogDirectory) (MonitoringLogFile, error){
+	log.Info("Starting monitoring log  ", logDirectory)
+	dir := logDirectory.Directory
+	monFilePattern := logDirectory.LogFilePattern
+	latestFile,err := utils.FindLatestFile(dir, monFilePattern)
 	if(err != nil){
 		return MonitoringLogFile{}, err
 	}
@@ -47,17 +52,17 @@ func MonitorLogPath(logPath  string) (MonitoringLogFile, error){
 	quitCh := make(chan string, 1)
 	linesReadCh := make(chan string, 1000)
 	linesConsumeTracker := make(chan int64, 1000)
-	monitoringLogFile := MonitoringLogFile{dir, latestFile, linesReadCh, 0, "", linesConsumeTracker, 0}
+	monitoringLogFile := MonitoringLogFile{dir, latestFile, linesReadCh, 0, "", linesConsumeTracker, 0, quitCh}
 	Files["test"] = &monitoringLogFile
 	
-	go monitoringLogFile.readLogFile(quitCh)
-	go monitoringLogFile.monitorDir(quitCh)
-	log.Info("Started monitoring log path ", logPath);
+	go monitoringLogFile.readLogFile()
+	go monitoringLogFile.monitorDir()
+	log.Info("Started monitoring log path ", filepath.Join(dir, monFilePattern));
 
 	return monitoringLogFile, nil	
 }
 
-func (monitoringLogFile *MonitoringLogFile) readLogFile(quitCh chan string){
+func (monitoringLogFile *MonitoringLogFile) readLogFile(){
 	absFilepath := filepath.Join(monitoringLogFile.Directory, monitoringLogFile.FileName)
 	log.Info("Start reading and buffering log file ", absFilepath)
 	
@@ -65,7 +70,7 @@ func (monitoringLogFile *MonitoringLogFile) readLogFile(quitCh chan string){
 	defer file.Close()
 	if err != nil {
 		log.Info("Got error while opening the file ", absFilepath, err)
-		quitCh <- "quit"
+		monitoringLogFile.quitCh <- "quit"
 		return
 	}
 
@@ -73,7 +78,7 @@ func (monitoringLogFile *MonitoringLogFile) readLogFile(quitCh chan string){
 	compressedFileBeingRead := false
 	for{
 		if !compressedFileBeingRead && len(monitoringLogFile.CompressedFile) > 0 {
-			file, err := monitoringLogFile.switchToCompressedFile(quitCh)
+			file, err := monitoringLogFile.switchToCompressedFile()
 			if err != nil{
 				return
 			}
@@ -132,12 +137,12 @@ func (monitoringLogFile *MonitoringLogFile) waitForConsuming(){
 	}
 }
 
-func (monitoringLogFile *MonitoringLogFile) switchToCompressedFile(quitCh chan string)(*os.File, error){
+func (monitoringLogFile *MonitoringLogFile) switchToCompressedFile()(*os.File, error){
 	log.Info("Opening Compressed file now")
 	file,err := os.Open(monitoringLogFile.CompressedFile)
 	if err != nil {
 		log.Info("Got error while opening the compressed file ", monitoringLogFile.CompressedFile, err)
-		quitCh <- "quit"
+		monitoringLogFile.quitCh <- "quit"
 		return nil,err
 	}
 	reader := bufio.NewReader(file)
@@ -145,7 +150,7 @@ func (monitoringLogFile *MonitoringLogFile) switchToCompressedFile(quitCh chan s
 	discarded,err  := reader.Discard(monitoringLogFile.Offset)
 	if err != nil{
 		log.Info("Could not seek into the compressed file ", monitoringLogFile.CompressedFile)
-		quitCh <- "quit"
+		monitoringLogFile.quitCh <- "quit"
 		defer file.Close()
 		return nil,err
 	}
@@ -153,7 +158,7 @@ func (monitoringLogFile *MonitoringLogFile) switchToCompressedFile(quitCh chan s
 	return file, nil
 }
 
-func (monitoringLogFile *MonitoringLogFile) monitorDir(quitCh chan string){
+func (monitoringLogFile *MonitoringLogFile) monitorDir(){
 	dirMonitorCh := make(chan notify.EventInfo, 10)
 	if err := notify.Watch(monitoringLogFile.Directory, dirMonitorCh, notify.Create, notify.Remove, notify.InMovedFrom, notify.InMovedTo); err != nil {
 		log.Info("Error while watching for create/remove/rename event for directory ", monitoringLogFile.Directory)
@@ -164,7 +169,7 @@ func (monitoringLogFile *MonitoringLogFile) monitorDir(quitCh chan string){
 	for{
 		var ei notify.EventInfo
 		select {
-		case <- quitCh:
+		case <- monitoringLogFile.quitCh:
 			log.Warn("Routine asked to quit");
 			return
 		case ei = <- dirMonitorCh:
