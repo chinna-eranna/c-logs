@@ -6,6 +6,7 @@ import Container from 'react-bootstrap/Container'
 import Row from 'react-bootstrap/Row'
 import Col from 'react-bootstrap/Col'
 import ListGroup from 'react-bootstrap/ListGroup'
+import ListGroupItem from 'react-bootstrap/ListGroupItem'
 import Modal from 'react-bootstrap/Modal'
 import InputGroup from 'react-bootstrap/InputGroup'
 import FormControl from 'react-bootstrap/FormControl'
@@ -17,15 +18,20 @@ import DropdownButton from 'react-bootstrap/DropdownButton'
 export class MonitoringAppLogList extends Component {
 
 	constructor(props) {
-		super(props);
+        super(props);
+        this.selectApplication = this.selectApplication.bind(this);
 		this.state = {  }
 	}
 
+    selectApplication(key) {
+		console.log("List item clicked: " +  key);
+    }
+    
 	render() {
         let appLogItems = [];
         this.props.monitoringApps.map((app, index) => {
             const uniqueKey = `${app.Id}` ;
-            appLogItems.push(<ListGroup.Item as="li" key={uniqueKey} active={app.active}>{app.Name}</ListGroup.Item>);
+            appLogItems.push(<ListGroupItem as="li" key={uniqueKey} active={app.active} onClick={(e) => this.selectApplication(uniqueKey)}>{app.Name}</ListGroupItem>);
         }); 
 
         return (

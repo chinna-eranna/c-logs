@@ -17,7 +17,7 @@ func Init() {
 	log.Println("Initializing API router")
 	router := mux.NewRouter()
 	router.HandleFunc("/", http.FileServer(http.Dir(".")).ServeHTTP).Methods("GET")
-	router.HandleFunc("/v1/logs", getLogs).Methods("GET")
+	router.HandleFunc("/v1/logDirectories/{id}/logs", getLogs).Methods("GET")
 	router.HandleFunc("/v1/logDirectories", addDirectory).Methods("POST")
 	router.HandleFunc("/v1/logDirectories", getAll).Methods("GET")
 	router.HandleFunc("/v1/logDirectories/{id}", removeDirectory).Methods("DELETE")
@@ -26,8 +26,22 @@ func Init() {
 }
 
 func getLogs(w http.ResponseWriter, r *http.Request){
-	log.Println("Invoked /v1/logs API")
-	monitoringFile := logs.Files["test"]
+	log.Info("Invoked GET ", r.URL.Path, " API")
+	vars := mux.Vars(r)
+	id, err := strconv.Atoi(vars["id"])
+	if err != nil {
+		log.Error("Invalid directory id for GET: Error -  ", err);
+		//TODO  separate error types for user errors vs application  errors.
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	monitoringFile := logs.Files[id]
+	if monitoringFile == nil {
+		log.Error("Invalid directory id for GET: Error -  ", err);
+		//TODO  separate error types for user errors vs application  errors.
+		http.Error(w, errors.New("Invalid directory for Monitoring start"), http.StatusBadRequest)
+	}
 	logMessages := monitoringFile.GetLogs()
 	logMessagesJson,err := json.MarshalIndent(logMessages, " ", " ")
 	if(err != nil){

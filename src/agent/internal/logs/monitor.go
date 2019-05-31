@@ -27,11 +27,11 @@ type MonitoringLogFile struct{
 
 	quitCh chan string
 }
-var Files map[string]*MonitoringLogFile
+var Files map[int]*MonitoringLogFile
 
 func Init(){
 	utils.EnsureAppHomeDir()
-	Files = make(map[string]*MonitoringLogFile)
+	Files = make(map[int]*MonitoringLogFile)
 	/*
 	_,err := MonitorLogPath("/test/file")
 	if(err != nil){
@@ -53,7 +53,7 @@ func MonitorLogPath(logDirectory utils.LogDirectory) (MonitoringLogFile, error){
 	linesReadCh := make(chan string, 1000)
 	linesConsumeTracker := make(chan int64, 1000)
 	monitoringLogFile := MonitoringLogFile{dir, latestFile, linesReadCh, 0, "", linesConsumeTracker, 0, quitCh}
-	Files["test"] = &monitoringLogFile
+	Files[logDirectory.Id] = &monitoringLogFile
 	
 	go monitoringLogFile.readLogFile()
 	go monitoringLogFile.monitorDir()

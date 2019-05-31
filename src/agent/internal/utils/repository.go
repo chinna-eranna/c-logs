@@ -109,12 +109,13 @@ func saveLogDirRepository(logDirectories []LogDirectory)(error){
 }
 
 func validatelogDirectories(logDirectories []LogDirectory, newLogDirectory LogDirectory)(error){
+	/*
 	newLogFilePattern := newLogDirectory.LogFilePattern;
-	if len(strings.Split(newLogFilePattern, "*")) > 2 {
+	if len(strings.Split(newLogFilePattern, "*")) < 1 {
 		log.Error("Invalid log file pattern, Max one * is allowed - ", newLogDirectory.Name)
 		return errors.New("Invalid log file pattern, Max one * is allowed")
 	}
-
+	*/
 	for _,logDirectory := range logDirectories {
 		if strings.EqualFold(logDirectory.Name, newLogDirectory.Name) {
 			log.Error("Duplicate name error - ", newLogDirectory.Name)

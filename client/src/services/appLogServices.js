@@ -37,8 +37,8 @@ function startMonitoring(appId){
     });
 }
 
-function getLogMessagesReq(host, appId, resolve, reject){
-    axios.get(`/v1/logs`).then(function(response){
+function getLogMessagesReq(appId, resolve, reject){
+    axios.get(`/v1/logDirectories/${appId}/logs`).then(function(response){
         console.log("Got logs: " + JSON.stringify(response));
         resolve(response);
     }).catch(function(err){
@@ -49,10 +49,10 @@ function getLogMessagesReq(host, appId, resolve, reject){
 
 
 
-function getLogMessages(host, appId){
+function getLogMessages(appId){
     return new Promise((resolve, reject) => { 
             //add content-type header
-            getLogMessagesReq(host, appId, resolve, reject);
+            getLogMessagesReq(appId, resolve, reject);
     });
 }
 
