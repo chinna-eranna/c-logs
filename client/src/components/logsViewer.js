@@ -6,6 +6,7 @@ import Jumbotron from 'react-bootstrap/Jumbotron'
 import InfiniteScroll from 'react-infinite-scroller';
 import { getLogMessages } from '../services/appLogServices';
 import *  as actions from '../actions/applicationActions';
+import * as types from '../actions/actionTypes';
 
 export class LogsViewer extends Component {
 
@@ -13,6 +14,8 @@ export class LogsViewer extends Component {
 		super(props);
 		this.loadMoreLogs = this.loadMoreLogs.bind(this);
 		this.getLogsToDisplay = this.getLogsToDisplay.bind(this);
+		this.paneDidMount = this.paneDidMount.bind(this);
+		this.onScroll = this.onScroll.bind(this);
 		this.state = {items: [<div>1</div>]}
 	}
 
@@ -23,28 +26,47 @@ export class LogsViewer extends Component {
 	}
 
 	componentDidMount(){
-		
+		console.log("Mount life cycle method");
+	}
+
+	paneDidMount(node){
+		console.log("Node did mount");
+		if (node) {
+		  node.addEventListener('scroll', () => console.log('scroll! Left: ' + node.scrollLeft + " Top:" + node.scrollTop));
+		}
+	};
+
+	componentDidUpdate(){
+		console.log("Update life cycle method");
+		if(this.refs.elem){
+			this.refs.elem.scrollTop = this.props.activeMonitoringApp[0].scrollTop;
+		}else{
+			console.log("Ref is not defined yet");
+		}
+	}
+	onScroll(){
+		var node = this.refs.elem;
+		console.log('scroll! Left: ' + node.scrollLeft + " Top:" + node.scrollTop)
+		this.props.setScrollPosition(node.scrollTop);
 	}
 
 	render() {
 		if (this.props.activeMonitoringApp && this.props.activeMonitoringApp.length > 0) {
 			return (
-					<div style={{border:'2px solid black', padding:'10px', height:'700px', overflow:'auto'}}>
+					<div ref="elem" onScroll={ this.onScroll } style={{border:'2px solid black', padding:'2px', height:'100vh', overflow:'auto'}}>
 				<InfiniteScroll
 					initialLoad={this.state.initialLoad}
 					pageStart={0}
 					loadMore={this.loadMoreLogs}
 					hasMore={true}
-					loader={<div className="loader" key={0}>Loading ...</div>}
+					loader={this.props.activeMonitoringApp[0].loading ? <div className="loader" key={0}>Loading ...</div> : ''}
 					useWindow={false}>
 					{this.getLogsToDisplay()}
 				</InfiniteScroll>
 			</div>
 			)
-		} else if(this.props.host &&  this.props.host.length > 0){
-			return (<Container> Please select an application to view logs </Container>);
 		} else{
-			return (<Container> Please enter a Host IP to view logs </Container>);
+			return (<Container> Please select an application to view logs </Container>);
 		}
 	}
 
@@ -56,10 +78,11 @@ export class LogsViewer extends Component {
 			for(var i = 0; i < this.props.logs.length;  i++){
 				logsHtml.push(<div style={{wordWrap: 'break-word', backgroundColor: '#dee2e6', margin:'1px'}}>  {this.props.logs[i]} </div>);
 			}
+			logsHtml.push(this.props.activeMonitoringApp[0].loading ? '' : <div onClick={this.loadMoreLogs}>Click to load more..🥃</div>)
 			return logsHtml;
 		}else{
 			console.log("No logs yet");
-		return [<div> No Logs to display </div>];
+			return [<div> No Logs to display </div>];
 		}
 	}
 
@@ -69,14 +92,15 @@ export class LogsViewer extends Component {
 const mapStateToProps = state => {
 	return {
 		host: state.application.host,
-		activeMonitoringApp: state.application.monitoringApps.filter(app => app.active),
-		logs: state.application.logs
+		activeMonitoringApp: state.application.monitoringApps.filter(app => app.Id === state.application.activeAppId),
+		logs: state.application["logs_" +  state.application.activeAppId]
 	};
 };
 
 const mapDispatchToProps = dispatch => {
 	return {
-		getMoreLogs: (app)  => {dispatch(actions.getMoreLogs(app));}
+		getMoreLogs: (app)  => {dispatch(actions.getMoreLogs(app));},
+		setScrollPosition:(topPosition) => { dispatch({type: types.SET_SCROLL_POSITION, payload: {'top':topPosition}});}
 	};
 };
 

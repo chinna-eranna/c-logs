@@ -20,42 +20,31 @@ export class Applications extends Component {
 
 	constructor(props) {
 		super(props);
-		this.addApplication = this.addApplication.bind(this);
-		this.state = { addApplication: false }
 	}
 
 	componentDidMount(){
 		this.props.fetchApplications();
 	}
 
-	addApplication() {
-		this.setState({ addApplication: true });
-	}
-
-
 	render() {
-		let addAppContent = '';
-
-		if (this.state.addApplication) {
-			addAppContent = (<AddApplication/>)
-		} else {
-			addAppContent = (<Button variant="outline-primary" onClick={this.addApplication}>Add Application</Button>);
-		}
+		let addAppContent = <AddApplication/>;
 		return (
 			<div>
-				<Container>
-					<Row>
-						<Col>
+				<div class="container-fluid">
+					<div className="row">
+						<div className="col">
 							{addAppContent}
-						</Col>
-					</Row>
-					<hr />
-					<Row>
-						<Col>
+						</div>
+					</div>
+				</div>
+				<hr/>
+				<div class="container-fluid">
+					<div className="row">
+						<div className="col">
 							<MonitoringAppLogList/>
-						</Col>
-					</Row>
-				</Container>
+						</div>
+					</div>
+				</div>
 			</div>
 		);
 	}

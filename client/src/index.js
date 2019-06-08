@@ -3,24 +3,38 @@ import ReactDOM from "react-dom";
 import {Provider} from 'react-redux';
 import configureStore from './store/configureStore';
 import LogsViewer from './components/logsViewer'
-import Applications from './components/applications'
-import Container from 'react-bootstrap/Container'
-import Row from 'react-bootstrap/Row'
-import Col from 'react-bootstrap/Col'
+import MonitoringAppLogList from './components/monitoringAppLogList'
+
 
 const store = configureStore();
 
 
 ReactDOM.render(
 <Provider store={store}>
-            <Container fluid={true}>
-            <Row>
-                <Col lg={2}>
-                    <Applications/>
-                </Col>
-                <Col lg={10}>
-                    <LogsViewer/>
-                </Col>
-            </Row>
-            </Container>
+    <div class="container-fluid">
+        <div className="row">
+            <div className="col col-lg-2" style={{border:'2px solid black', height:'100vh', overflow:'auto'}}>
+                <div className="row">
+                    <div className="col">
+                        <div class="container-fluid">
+                           
+                            <div style={{fontFamily:'cursive', textAlign:'center'}}>
+                                <h1>C-Logs</h1>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                    
+                <div className="row">
+                    <div className="col">
+                        <MonitoringAppLogList/>
+                    </div>
+                </div>
+                
+            </div>
+            <div className="col col-lg-10">
+                <LogsViewer/>
+            </div>
+        </div>
+    </div>
     </Provider>, document.getElementById("index"));

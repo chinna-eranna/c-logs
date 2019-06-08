@@ -12,6 +12,10 @@ import InputGroup from 'react-bootstrap/InputGroup'
 import FormControl from 'react-bootstrap/FormControl'
 import Dropdown from 'react-bootstrap/Dropdown'
 import DropdownButton from 'react-bootstrap/DropdownButton'
+import * as types from '../actions/actionTypes';
+import MonitoringDirSettings from './monitoringDirSettings'
+import * as actions from '../actions/applicationActions'
+import AddApplication from './addApplication'
 
 
 
@@ -21,24 +25,39 @@ export class MonitoringAppLogList extends Component {
         super(props);
         this.selectApplication = this.selectApplication.bind(this);
 		this.state = {  }
+    }
+    
+    componentDidMount(){
+		this.props.fetchApplications();
 	}
 
-    selectApplication(key) {
-		console.log("List item clicked: " +  key);
+    selectApplication(appId) {
+        console.log("List item clicked: " +  appId);
+        this.props.selectApp(appId);
     }
     
 	render() {
         let appLogItems = [];
+        console.log("Rendering MonitoringAppLogList")
         this.props.monitoringApps.map((app, index) => {
-            const uniqueKey = `${app.Id}` ;
-            appLogItems.push(<ListGroupItem as="li" key={uniqueKey} active={app.active} onClick={(e) => this.selectApplication(uniqueKey)}>{app.Name}</ListGroupItem>);
+            const appId = `${app.Id}` ;
+            const active = (app.Id === this.props.activeAppId) ? true: false;
+            console.log("AppName: "+ app.Name + " Active: " + active);
+           // appLogItems.push(<ListGroupItem as="li" key={app.Id} active={active} onClick={(e) => this.selectApplication(app.Id)}  style={{cursor:'pointer'}}>{app.Name}</ListGroupItem>);
+
+            appLogItems.push(<MonitoringDirSettings appName={app.Name} appId={app.Id}/>)
         }); 
 
         return (
-            <div>
-                <ListGroup as="ul">
-                    {appLogItems}
-                </ListGroup>
+            <div style={{textAlign:'center'}}>
+                <hr style={{border:'3px solid blue'}}/>
+                Monitoring Log Directories
+                <hr style={{border:'3px solid blue'}}/>
+
+                <AddApplication/>
+  
+                {appLogItems}
+              
             </div>
         );
 	}
@@ -46,13 +65,15 @@ export class MonitoringAppLogList extends Component {
 
 const mapStateToProps = state => {
 	return {
-       monitoringApps: state.application.monitoringApps
+       monitoringApps: state.application.monitoringApps,
+       activeAppId: state.application.activeAppId
 	};
 };
 
 const mapDispatchToProps = dispatch => {
 	return {
-
+        selectApp:(appId) => { dispatch({type: types.SELECT_APP, payload: {'id':appId}});},
+        fetchApplications:()  => {dispatch(actions.fetchApplications());}
 	};
 };
 
