@@ -26,16 +26,19 @@ export class AddApplication extends Component {
 				this.handleAddAppLog = this.handleAddAppLog.bind(this);
 				this.handleCancelAppLog = this.handleCancelAppLog.bind(this);
 				this.addApplication = this.addApplication.bind(this);
-				this.state = {selectApplication : false};
+				this.state = {selectApplication : false, selectedApp : '-None-'};
 		}
 		
 	handleAddAppLog(){
+		if(this.state.selectedApp === '-None-'){
+			return;
+		}
 		const appToBeMonitored =  this.props.availableApps.filter((app, index) => {
 			return app.Name == this.state.selectedApp
 		});
 		console.log("Application To Be monitored:" + JSON.stringify(appToBeMonitored));
 		this.props.monitorAppLog(appToBeMonitored[0]);
-		this.setState({selectApplication: false});
+		this.setState({selectApplication: false, selectedApp : '-None-'});
 	}
 
 	handleCancelAppLog(){
@@ -56,15 +59,26 @@ export class AddApplication extends Component {
 	}
 
 	getAvailableApps(){
-		let applications = new Set();
+		let monitoringAppNames  = new Set();
+		this.props.monitoringApps.map((app, index) => {
+			monitoringAppNames.add(app.Name);
+		});
+
+		let availableAppNames = new Set();
 		this.props.availableApps.map((app, index) => {
-			applications.add(app.Name);
+			if(!monitoringAppNames.has(app.Name)){
+				availableAppNames.add(app.Name);
+			}
 			console.log("Application being added: " + app.appName);
 		});
-		console.log("Total unique applications: " + applications.size);
+
+
+
+		console.log("Total unique applications: " + availableAppNames.size);
 		let availableAppsContent = [];
-		for (let app of applications)
+		for (let app of availableAppNames){
 			availableAppsContent.push(<Dropdown.Item size="sm" eventKey={app} key={app}>{app}</Dropdown.Item>);
+		}
 	
 		let selectedApp = this.state.selectedApp ? this.state.selectedApp : '-None-';
 		let selectAppContent = (<DropdownButton size="sm" as={InputGroup.Prepend} variant="outline-secondary"
@@ -106,7 +120,8 @@ export class AddApplication extends Component {
 
 const mapStateToProps = state => {
 	return {
-				availableApps: state.application.availableApps
+				availableApps: state.application.availableApps,
+				monitoringApps:  state.application.monitoringApps
    };
 };
 

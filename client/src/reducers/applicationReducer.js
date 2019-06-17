@@ -18,6 +18,9 @@ export default function application(state = initialState, action){
             break;
         case types.MONITOR_APP_LOG:
             const monitoringApp = action.payload;
+            monitoringApp.tail = true;
+            monitoringApp.tailLogsCount = 0;
+            monitoringApp.displaySettings = false;
             newState = dotProp.set(state, 'monitoringApps', list => [...list, monitoringApp]);
             newState = dotProp.set(newState, 'logs_' + monitoringApp.Id, []);
             newState = dotProp.set(newState, 'activeAppId', monitoringApp.Id);
@@ -28,10 +31,27 @@ export default function application(state = initialState, action){
             newState = dotProp.set(newState, 'activeAppId', action.payload.id);
             break;
         case types.FETCH_LOGS_START:
-            newState = updateArrayProperty(newState, 'monitoringApps', 'Id', newState.activeAppId, 'loading', true);
+            newState = updateArrayProperty(newState, 'monitoringApps', 'Id', action.payload.id, 'loading', true);
             break;
         case types.FETCH_LOGS_END:
-            newState = updateArrayProperty(newState, 'monitoringApps', 'Id', newState.activeAppId, 'loading', false);
+            const app = newState.monitoringApps.filter((monApp) => {
+                return monApp.Id === action.payload.id;
+            })
+            if(app && app.length > 0){
+                app[0].tailLogsCount = app[0].tailLogsCount + action.payload.logsCount;
+                if(app[0].tailLogsCount  >= 1000){
+                    app[0].tail = false;
+                    console.log("Reducer stopping the tail, as it has got 1000 log messages");
+                }
+            }
+            newState = updateArrayProperty(newState, 'monitoringApps', 'Id', action.payload.id, 'loading', false);
+            break;
+        case types.START_TAIL:
+            newState = updateArrayProperty(newState, 'monitoringApps', 'Id', action.payload.id, 'tail', true);
+            newState = updateArrayProperty(newState, 'monitoringApps', 'Id', action.payload.id, 'tailLogsCount', 0);
+            break;
+        case types.STOP_TAIL:
+            newState = updateArrayProperty(newState, 'monitoringApps', 'Id', action.payload.id, 'tail', false);
             break;
         case types.SET_SCROLL_POSITION:
             newState = updateArrayProperty(newState, 'monitoringApps', 'Id', newState.activeAppId, 'scrollTop', action.payload.top);
@@ -43,6 +63,9 @@ export default function application(state = initialState, action){
         case types.CLEAR_LOGS:
             newState = dotProp.set(newState, 'logs_' + action.payload.id, []);
             break;
+        case types.TOGGLE_DISPLAY_SETTINGS:
+            newState = updateArrayProperty(newState, 'monitoringApps', 'Id', action.payload.id, 'displaySettings', action.payload.displaySettings);
+            break;
         default :
         console.log('default: ' + JSON.stringify(action));
     }
@@ -50,12 +73,15 @@ export default function application(state = initialState, action){
 }
 
 function updateArrayProperty(state, array, filterPropName, filterPropVal, propName, propValue ){
+    var newState = state;
     for(var i in state[array]){
         if (state[array][i][filterPropName] === filterPropVal){
-            state[array][i][propName] = propValue;
+            newState = dotProp.set(state, `${array}.${i}.${propName}`,  propValue)
+            //state[array][i][propName] = propValue;
+            break;
         }
     }
-    const newArray = [...state[array]];
-    const newState = dotProp.set(state, array, newArray);
+   // const newArray = [...state[array]];
+    //const newState = dotProp.set(state, array, newArray);
     return newState
 }

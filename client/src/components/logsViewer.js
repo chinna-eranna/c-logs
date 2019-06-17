@@ -21,8 +21,12 @@ export class LogsViewer extends Component {
 
 	loadMoreLogs(){
 		this.setState({ initialLoad: false });
-		console.log("Load more logs invoked");
-		this.props.getMoreLogs(this.props.activeMonitoringApp[0]);
+		if(!this.props.activeMonitoringApp[0].tail){
+			console.log("Load more logs invoked");
+			this.props.getMoreLogs(this.props.activeMonitoringApp[0]);
+		}else{
+			console.log("Tailing is ON, hence not loading");
+		}
 	}
 
 	componentDidMount(){
@@ -78,7 +82,7 @@ export class LogsViewer extends Component {
 			for(var i = 0; i < this.props.logs.length;  i++){
 				logsHtml.push(<div style={{wordWrap: 'break-word', backgroundColor: '#dee2e6', margin:'1px'}}>  {this.props.logs[i]} </div>);
 			}
-			logsHtml.push(this.props.activeMonitoringApp[0].loading ? '' : <div onClick={this.loadMoreLogs}>Click to load more..🥃</div>)
+			logsHtml.push(this.props.activeMonitoringApp[0].loading ? '' : <div style={{cursor:'pointer'}} onClick={this.loadMoreLogs}>Click to load more..🥃</div>)
 			return logsHtml;
 		}else{
 			console.log("No logs yet");

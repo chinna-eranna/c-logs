@@ -35,17 +35,17 @@ export class MonitoringAppLogList extends Component {
         console.log("List item clicked: " +  appId);
         this.props.selectApp(appId);
     }
-    
+  
+
 	render() {
         let appLogItems = [];
         console.log("Rendering MonitoringAppLogList")
+
         this.props.monitoringApps.map((app, index) => {
             const appId = `${app.Id}` ;
             const active = (app.Id === this.props.activeAppId) ? true: false;
             console.log("AppName: "+ app.Name + " Active: " + active);
-           // appLogItems.push(<ListGroupItem as="li" key={app.Id} active={active} onClick={(e) => this.selectApplication(app.Id)}  style={{cursor:'pointer'}}>{app.Name}</ListGroupItem>);
-
-            appLogItems.push(<MonitoringDirSettings appName={app.Name} appId={app.Id}/>)
+            appLogItems.push(<MonitoringDirSettings app={app} logCount={app.tailLogsCount}/>)
         }); 
 
         return (
@@ -74,7 +74,7 @@ const mapDispatchToProps = dispatch => {
 	return {
         selectApp:(appId) => { dispatch({type: types.SELECT_APP, payload: {'id':appId}});},
         fetchApplications:()  => {dispatch(actions.fetchApplications());}
-	};
+   };
 };
 
 export default connect(mapStateToProps, mapDispatchToProps)(MonitoringAppLogList);

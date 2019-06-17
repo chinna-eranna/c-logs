@@ -10,3 +10,6 @@ export const SET_HOST = 'SET_HOST';
 export const LOGS_MESSAGES = 'LOGS_MESSAGES'
 export const SET_SCROLL_POSITION = 'SET_SCROLL_POSITION';
 export const CLEAR_LOGS = 'CLEAR_LOGS';
+export const TOGGLE_DISPLAY_SETTINGS = 'TOGGLE_DISPLAY_SETTINGS';
+export const START_TAIL = 'START_TAIL';
+export const STOP_TAIL = 'STOP_TAIL';

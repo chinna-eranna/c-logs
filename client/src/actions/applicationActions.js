@@ -45,6 +45,13 @@ export function monitorAppLog(app){
     }
 }
 
+export  function tailContent(app){
+    return dispatch => {
+        console.log("Invoked tailContent");
+        getLogMessages(app.Id).then((response) => {logsResponseHandler(app, dispatch, response)});
+    }
+}
+
 export function getMoreLogs(app){
     console.log("Invoked getMoreLogs for app  " + JSON.stringify(app)) ; 
     return dispatch  => {   
@@ -61,11 +68,11 @@ function _getLogs(app, dispatch){
 }
 
 function logsResponseHandler(app, dispatch, response){
-        dispatch({type:  types.FETCH_LOGS_END, payload: {id:app.Id}});
         if(response.data.length == 0){
             console.log("No Logs to fetch");
         }else{
             console.log("Got logs in logsResponseHandler");
             dispatch({type: types.LOGS_MESSAGES, payload: {appId:app.Id, logs:response.data}});
         }
+        dispatch({type:  types.FETCH_LOGS_END, payload: {id:app.Id, logsCount:response.data.length}});
 }

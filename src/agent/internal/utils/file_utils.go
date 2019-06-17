@@ -11,7 +11,9 @@ import (
 	"path/filepath"
 	"time"
 	"regexp"
-	"compress/gzip")
+	"bytes"
+	"compress/gzip"
+	"os/exec")
 
 func EnsureAppHomeDir(){
 	homeDir, _ := homedir.Dir()
@@ -108,4 +110,43 @@ func GunzipFile(gzFilePath, dstFilePath string) (int64, error) {
     dstFile.Close()
 
     return written, nil
+}
+
+func getMatchingFiles(dir string, filePattern string)([]string, error){
+	var matchingFiles []string
+	filesCh, err  := ioutil.ReadDir(dir)
+	if err != nil{
+		log.Error("getMatchingFiles():Error while listing files in directory", dir, err)
+		return matchingFiles, err
+	}
+	
+	for _, f := range filesCh {
+		fileMatch, regexErr := regexp.MatchString(filePattern, f.Name())
+		if regexErr != nil  {
+			log.Error("getMatchingFiles():Error while matching the pattern ", filePattern, " with file ", f.Name(), " -- Error:  ", regexErr)
+			return matchingFiles, regexErr
+		}
+		if  fileMatch {
+			matchingFiles = append(matchingFiles, filepath.Join(dir, f.Name()))
+		}else {
+			log.Info("Ignoring file ", f.Name(), " as the name didn't match with pattern ", filePattern)
+		}
+	}
+	log.Info("matching Files in ", dir, " are ", matchingFiles)
+	return matchingFiles, nil
+}
+
+func SearchLogs(directory string, filePattern string, searchString string)([]SearchResult){
+	filesToSearch, _ := getMatchingFiles(directory, filePattern)
+	args := []string{"-n", searchString,}
+	args = append(args, filesToSearch...)
+	cmd := exec.Command("grep", args...)
+	var out bytes.Buffer
+	cmd.Stdout = &out
+	err := cmd.Run()
+	if err != nil {
+		log.Fatal("Error while searching ", err)
+	}
+	fmt.Printf("Output Returned: %q\n", out.String())
+	return ParseResults(out.String())
 }

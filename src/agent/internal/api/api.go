@@ -10,7 +10,7 @@ import (
 	"strconv"
 	"agent/internal/logs"
 	"agent/internal/utils"
-	
+
 )
 
 func Init() {
@@ -22,6 +22,7 @@ func Init() {
 	router.HandleFunc("/v1/logDirectories", getAll).Methods("GET")
 	router.HandleFunc("/v1/logDirectories/{id}", removeDirectory).Methods("DELETE")
 	router.HandleFunc("/v1/logDirectories/{id}/start", startMonitoring).Methods("POST")
+	router.HandleFunc("/v1/logDirectories/{id}/search", searchDirectory).Methods("POST")
 	log.Fatal(http.ListenAndServe(":13999", router))
 }
 
@@ -40,7 +41,7 @@ func getLogs(w http.ResponseWriter, r *http.Request){
 	if monitoringFile == nil {
 		log.Error("Invalid directory id for GET: Error -  ", err);
 		//TODO  separate error types for user errors vs application  errors.
-		http.Error(w, errors.New("Invalid directory for Monitoring start"), http.StatusBadRequest)
+		http.Error(w, "Invalid directory for Monitoring start", http.StatusBadRequest)
 	}
 	logMessages := monitoringFile.GetLogs()
 	logMessagesJson,err := json.MarshalIndent(logMessages, " ", " ")
@@ -121,4 +122,25 @@ func startMonitoring(w http.ResponseWriter, r *http.Request){
 
 	logDirectory := utils.GetLogDirectory(id)
 	logs.MonitorLogPath(logDirectory)
+}
+
+func searchDirectory(w http.ResponseWriter, r *http.Request){
+	log.Info("Invoked POST", r.URL.Path, " API")
+	vars := mux.Vars(r)
+	id, err := strconv.Atoi(vars["id"])
+	if err != nil {
+		log.Error("Invalid directory id for searching: Error -  ", err);
+		//TODO  separate error types for user errors vs application  errors.
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	logDirectory := utils.GetLogDirectory(id)
+	results := utils.SearchLogs(logDirectory.Directory, logDirectory.LogFilePattern, "NullPointerException")
+	jsonResults, err := json.MarshalIndent(results, " ", " ")
+	if(err != nil){
+		log.Error("Error while parsing results - ", err)
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+	}else{
+		w.Write(jsonResults)
+	}
 }
