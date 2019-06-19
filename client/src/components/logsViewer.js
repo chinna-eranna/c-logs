@@ -96,8 +96,7 @@ export class LogsViewer extends Component {
 const mapStateToProps = state => {
 	return {
 		host: state.application.host,
-		activeMonitoringApp: state.application.monitoringApps.filter(app => app.Id === state.application.activeAppId),
-		logs: state.application["logs_" +  state.application.activeAppId]
+		activeMonitoringApp: state.application.monitoringApps.filter(app => app.Id === state.application.activeAppId)
 	};
 };
 

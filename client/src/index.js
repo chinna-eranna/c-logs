@@ -2,7 +2,7 @@ import React from "react";
 import ReactDOM from "react-dom";
 import {Provider} from 'react-redux';
 import configureStore from './store/configureStore';
-import LogsViewer from './components/logsViewer'
+import ContentViewer from './components/contentViewer'
 import MonitoringAppLogList from './components/monitoringAppLogList'
 
 
@@ -33,7 +33,7 @@ ReactDOM.render(
                 
             </div>
             <div className="col col-lg-10">
-                <LogsViewer/>
+                <ContentViewer/>
             </div>
         </div>
     </div>

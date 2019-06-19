@@ -56,6 +56,16 @@ function getLogMessages(appId){
     });
 }
 
+function searchInApp(appId){
+    return new Promise((resolve, reject)=> {
+        axios.post(`/v1/logDirectories/${appId}/search`).then(function(response){
+            resolve(response);
+        }).catch(function(err){
+            reject(err);
+        });
+    });
+}
 
 
-export {monitorHostLogs, getLogDirectories, startMonitoring, getLogMessages}
+
+export {monitorHostLogs, getLogDirectories, startMonitoring, getLogMessages, searchInApp}

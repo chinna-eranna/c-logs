@@ -13,3 +13,5 @@ export const CLEAR_LOGS = 'CLEAR_LOGS';
 export const TOGGLE_DISPLAY_SETTINGS = 'TOGGLE_DISPLAY_SETTINGS';
 export const START_TAIL = 'START_TAIL';
 export const STOP_TAIL = 'STOP_TAIL';
+export const SET_SEARCH_TEXT = 'SET_SEARCH_TEXT';
+export const SEARCH_RESULTS = 'SEARCH_RESULTS';

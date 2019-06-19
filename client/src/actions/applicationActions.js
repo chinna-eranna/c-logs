@@ -1,5 +1,5 @@
 import * as types from './actionTypes';
-import {monitorHostLogs, getLogDirectories, startMonitoring, getLogMessages} from '../services/appLogServices'
+import {monitorHostLogs, getLogDirectories, startMonitoring, getLogMessages, searchInApp} from '../services/appLogServices'
 
 export function monitorHost(host){
     return dispatch => {
@@ -49,6 +49,18 @@ export  function tailContent(app){
     return dispatch => {
         console.log("Invoked tailContent");
         getLogMessages(app.Id).then((response) => {logsResponseHandler(app, dispatch, response)});
+    }
+}
+
+export function search(app) {
+    return dispatch => {
+        console.log("Starting search for app ", app.Name, " with search text ", app.searchText);
+        searchInApp(app.Id, app.searchText).then(function(response){
+            dispatch({type: types.SEARCH_RESULTS, payload: {id: app.Id, searchResults: response.data}});
+            console.log("Successfully retrieved the search results for app " + response.data);
+        }, function(err){
+            console.log("Error in the search request ", err);
+        });
     }
 }
 

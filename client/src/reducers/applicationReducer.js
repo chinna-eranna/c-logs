@@ -66,6 +66,10 @@ export default function application(state = initialState, action){
         case types.TOGGLE_DISPLAY_SETTINGS:
             newState = updateArrayProperty(newState, 'monitoringApps', 'Id', action.payload.id, 'displaySettings', action.payload.displaySettings);
             break;
+        case types.SET_SEARCH_TEXT:
+            newState = updateArrayProperty(newState, 'monitoringApps', 'Id', action.payload.id, 'searchText', action.payload.searchText);
+        case types.SEARCH_RESULTS:
+            newState = updateArrayProperty(newState,  'monitoringApps', 'Id', action.payload.id, 'searchResults', action.payload.searchResults);
         default :
         console.log('default: ' + JSON.stringify(action));
     }
