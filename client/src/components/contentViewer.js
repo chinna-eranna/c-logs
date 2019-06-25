@@ -1,13 +1,10 @@
 import { Component } from 'react';
 import React from "react";
 import { connect } from 'react-redux';
-import Container from 'react-bootstrap/Container'
-import Jumbotron from 'react-bootstrap/Jumbotron'
-import InfiniteScroll from 'react-infinite-scroller';
-import { getLogMessages } from '../services/appLogServices';
-import *  as actions from '../actions/applicationActions';
-import * as types from '../actions/actionTypes';
-import { LogsViewer } from './logsViewer';
+import Tabs from 'react-bootstrap/Tabs'
+import Tab from 'react-bootstrap/Tab'
+import LogsViewer  from './logsViewer';
+import SearchResults from './searchResults';
 
 export class ContentViewer extends Component {
 
@@ -18,19 +15,22 @@ export class ContentViewer extends Component {
 	
 
 	render() {
-		if (this.props.activeMonitoringApp && this.props.activeMonitoringApp.searchResults && this.props.activeMonitoringApp.searchResults.length > 0) {
+		console.log("ActiveMonitoringApp in ContentViewer :", this.props.activeMonitoringApp);
+		if (this.props.activeMonitoringApp.length > 0 && this.props.activeMonitoringApp[0].searchResults && this.props.activeMonitoringApp[0].searchResults.length > 0) {
 			return (
-                <Tabs defaultActiveKey="contentViewer" id="content-viewer">
+				<div style={{height:'100vh', overflow:'auto'}}>
+                <Tabs defaultActiveKey="searchResults" id="content-viewer">
                     <Tab eventKey="logs" title="Logs">
-                        <LogsViewer logs={this.props.logs}/>
+                        <LogsViewer logs={this.props.logs} activeMonitoringApp={this.props.activeMonitoringApp}/>);
                     </Tab>
                     <Tab eventKey="searchResults" title="Search Results">
-                        Search Results here
+                        <SearchResults results={this.props.activeMonitoringApp[0].searchResults}/>
                     </Tab>
                 </Tabs>
+				</div>
 			);
 		} else{
-			return ( <LogsViewer logs={this.props.logs}/>);
+			return ( <LogsViewer logs={this.props.logs} activeMonitoringApp={this.props.activeMonitoringApp}/>);
 		}
 	}
 }
@@ -39,11 +39,12 @@ export class ContentViewer extends Component {
 const mapStateToProps = state => {
 	return {
         activeMonitoringApp: state.application.monitoringApps.filter(app => app.Id === state.application.activeAppId),
-        logs: state.application["logs_" +  state.application.activeAppId]
+		logs: state.application["logs_" +  state.application.activeAppId]
 	};
 };
 
 const mapDispatchToProps = dispatch => {
+	console.log("Invoking Content Viewer connect ---");
 	return {
 		
 	};

@@ -55,6 +55,7 @@ export class LogsViewer extends Component {
 	}
 
 	render() {
+		console.log("Active Monitoring App in LogsViewer rendeer : ", this.props.activeMonitoringApp);
 		if (this.props.activeMonitoringApp && this.props.activeMonitoringApp.length > 0) {
 			return (
 					<div ref="elem" onScroll={ this.onScroll } style={{border:'2px solid black', padding:'2px', height:'100vh', overflow:'auto'}}>
@@ -94,13 +95,16 @@ export class LogsViewer extends Component {
 
 
 const mapStateToProps = state => {
+	console.log("Invoking state Logs Viewer connect ---");
 	return {
-		host: state.application.host,
-		activeMonitoringApp: state.application.monitoringApps.filter(app => app.Id === state.application.activeAppId)
+		activeAppId: state.application.activeAppId,
+		activeMonitoringApp: state.application.monitoringApps.filter(app => app.Id === state.application.activeAppId),
+        logs: state.application["logs_" +  state.application.activeAppId]
 	};
 };
 
 const mapDispatchToProps = dispatch => {
+	console.log("Invoking dispatch Logs Viewer connect ---");
 	return {
 		getMoreLogs: (app)  => {dispatch(actions.getMoreLogs(app));},
 		setScrollPosition:(topPosition) => { dispatch({type: types.SET_SCROLL_POSITION, payload: {'top':topPosition}});}

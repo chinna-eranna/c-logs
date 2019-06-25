@@ -56,9 +56,9 @@ function getLogMessages(appId){
     });
 }
 
-function searchInApp(appId){
+function searchInApp(appId, searchString){
     return new Promise((resolve, reject)=> {
-        axios.post(`/v1/logDirectories/${appId}/search`).then(function(response){
+        axios.post(`/v1/logDirectories/${appId}/search`, {searchString: searchString}).then(function(response){
             resolve(response);
         }).catch(function(err){
             reject(err);
