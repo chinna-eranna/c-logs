@@ -47,8 +47,6 @@ function getLogMessagesReq(appId, resolve, reject){
     });
 }
 
-
-
 function getLogMessages(appId){
     return new Promise((resolve, reject) => { 
             //add content-type header
@@ -58,7 +56,7 @@ function getLogMessages(appId){
 
 function searchInApp(appId, searchString){
     return new Promise((resolve, reject)=> {
-        axios.post(`/v1/logDirectories/${appId}/search`, {searchString: searchString}).then(function(response){
+        axios.post(`/v1/logDirectories/${appId}/search`, {SearchString: searchString}).then(function(response){
             resolve(response);
         }).catch(function(err){
             reject(err);

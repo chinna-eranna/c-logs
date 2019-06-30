@@ -5,6 +5,10 @@ import  (
 	log "github.com/Sirupsen/logrus"
 )
 
+type SearchQuery struct{
+	SearchString string
+}
+
 type SearchResult struct{
 	Name string
 	Line string

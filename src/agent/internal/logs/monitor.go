@@ -62,6 +62,18 @@ func MonitorLogPath(logDirectory utils.LogDirectory) (MonitoringLogFile, error){
 	return monitoringLogFile, nil	
 }
 
+func (monitoringLogFile *MonitoringLogFile) resetMonitoring(file string, line int)(bool){
+	exists := utils.FileExists(monitoringLogFile.Directory, file)
+	if(!exists){
+		return false
+	}
+
+	monitoringLogFile.FileName = file
+	monitoringLogFile.Lines = make(chan string, 1000)
+	monitoringLogFile.CompressedFile = "";
+
+}
+
 func (monitoringLogFile *MonitoringLogFile) readLogFile(){
 	absFilepath := filepath.Join(monitoringLogFile.Directory, monitoringLogFile.FileName)
 	log.Info("Start reading and buffering log file ", absFilepath)
@@ -77,6 +89,9 @@ func (monitoringLogFile *MonitoringLogFile) readLogFile(){
 	reader := bufio.NewReader(file)
 	compressedFileBeingRead := false
 	for{
+		if reset {
+			monitoringLogFile
+		}
 		if !compressedFileBeingRead && len(monitoringLogFile.CompressedFile) > 0 {
 			file, err := monitoringLogFile.switchToCompressedFile()
 			if err != nil{

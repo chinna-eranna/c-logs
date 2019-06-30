@@ -134,8 +134,22 @@ func searchDirectory(w http.ResponseWriter, r *http.Request){
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
+
+	reqBody,err := ioutil.ReadAll(r.Body)
+	if err != nil {
+		http.Error(w, "Cannot read body", http.StatusBadRequest)
+	}
+
+	searchQuery := utils.SearchQuery{}
+	err = json.Unmarshal(reqBody, &searchQuery)
+	if err != nil {
+		log.Error("Invalid Json for searchDirectory API ", string(reqBody), err)
+		http.Error(w, "Cannot unmarshal json", http.StatusBadRequest)
+		return
+	}
+
 	logDirectory := utils.GetLogDirectory(id)
-	results := utils.SearchLogs(logDirectory.Directory, logDirectory.LogFilePattern, "NullPointerException")
+	results := utils.SearchLogs(logDirectory.Directory, logDirectory.LogFilePattern, searchQuery.SearchString)
 	jsonResults, err := json.MarshalIndent(results, " ", " ")
 	if(err != nil){
 		log.Error("Error while parsing results - ", err)

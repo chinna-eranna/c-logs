@@ -28,6 +28,14 @@ func GetAppHomeDir()(string){
 	return appDir
 }
 
+func FileExists(dir string, filename string)(bool){
+	info, err := os.Stat(filename)
+    if os.IsNotExist(err) {
+        return false
+    }
+    return !info.IsDir()
+}
+
 func FindLatestFile(dir string, filePattern string)(string, error){
 	filesCh, err  := ioutil.ReadDir(dir)
 	if err != nil{
