@@ -1,5 +1,5 @@
 import * as types from './actionTypes';
-import {monitorHostLogs, getLogDirectories, startMonitoring, getLogMessages, searchInApp} from '../services/appLogServices'
+import {monitorHostLogs, getLogDirectories, startMonitoring, getLogMessages, searchInApp, resetMonitoring} from '../services/appLogServices'
 
 export function monitorHost(host){
     return dispatch => {
@@ -68,6 +68,18 @@ export function getMoreLogs(app){
     console.log("Invoked getMoreLogs for app  " + JSON.stringify(app)) ; 
     return dispatch  => {   
         getLogs(app, dispatch);
+    }
+}
+
+export function reset(app, file, lineNumber){
+    return dispatch => {
+        resetMonitoring(app.Id, file, lineNumber).then(function(response){
+            console.log("Successfully reset monitoring");
+            dispatch({type: types.CLEAR_LOGS, payload: {id: app.Id}})
+            dispatch({type: types.START_TAIL, payload: {id: app.Id}})
+        }, function(err){
+            console.log("Error while reset monitoring - ", err);
+        })
     }
 }
 

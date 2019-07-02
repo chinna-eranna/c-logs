@@ -26,7 +26,16 @@ type MonitoringLogFile struct{
 	LinesProduced int64
 
 	quitCh chan string
+	reset bool
+	resetLineNumber int
+	start bool
 }
+
+type ResetRequest struct{
+	FileName string
+	LineNumber int
+}
+
 var Files map[int]*MonitoringLogFile
 
 func Init(){
@@ -52,7 +61,7 @@ func MonitorLogPath(logDirectory utils.LogDirectory) (MonitoringLogFile, error){
 	quitCh := make(chan string, 1)
 	linesReadCh := make(chan string, 1000)
 	linesConsumeTracker := make(chan int64, 1000)
-	monitoringLogFile := MonitoringLogFile{dir, latestFile, linesReadCh, 0, "", linesConsumeTracker, 0, quitCh}
+	monitoringLogFile := MonitoringLogFile{dir, latestFile, linesReadCh, 0, "", linesConsumeTracker, 0, quitCh, false, 0, true}
 	Files[logDirectory.Id] = &monitoringLogFile
 	
 	go monitoringLogFile.readLogFile()
@@ -62,56 +71,82 @@ func MonitorLogPath(logDirectory utils.LogDirectory) (MonitoringLogFile, error){
 	return monitoringLogFile, nil	
 }
 
-func (monitoringLogFile *MonitoringLogFile) resetMonitoring(file string, line int)(bool){
-	exists := utils.FileExists(monitoringLogFile.Directory, file)
+func (monitoringLogFile *MonitoringLogFile) ResetMonitoring(resetReq ResetRequest)(bool){
+	exists := utils.FileExists(monitoringLogFile.Directory, resetReq.FileName)
 	if(!exists){
+		log.Error("Request file ",resetReq.FileName," doesn't exist in monitoring directory ", monitoringLogFile.Directory)
 		return false
 	}
 
-	monitoringLogFile.FileName = file
+	monitoringLogFile.reset = true
+	monitoringLogFile.FileName = resetReq.FileName
+	monitoringLogFile.resetLineNumber = resetReq.LineNumber
+	monitoringLogFile.LinesConsumed <- monitoringLogFile.LinesProduced
 	monitoringLogFile.Lines = make(chan string, 1000)
-	monitoringLogFile.CompressedFile = "";
-
+	return true
 }
 
 func (monitoringLogFile *MonitoringLogFile) readLogFile(){
-	absFilepath := filepath.Join(monitoringLogFile.Directory, monitoringLogFile.FileName)
-	log.Info("Start reading and buffering log file ", absFilepath)
-	
-	file,err := os.Open(absFilepath)
-	defer file.Close()
-	if err != nil {
-		log.Info("Got error while opening the file ", absFilepath, err)
-		monitoringLogFile.quitCh <- "quit"
-		return
-	}
+	for monitoringLogFile.start  || /*monitoringLogFile.nextFile ||*/ monitoringLogFile.reset {
 
-	reader := bufio.NewReader(file)
-	compressedFileBeingRead := false
-	for{
-		if reset {
-			monitoringLogFile
+		if monitoringLogFile.start {
+			monitoringLogFile.start = false;
 		}
-		if !compressedFileBeingRead && len(monitoringLogFile.CompressedFile) > 0 {
-			file, err := monitoringLogFile.switchToCompressedFile()
-			if err != nil{
-				return
+
+		absFilepath := filepath.Join(monitoringLogFile.Directory, monitoringLogFile.FileName)
+		log.Info("Start reading and buffering log file ", absFilepath)
+		
+		file,err := os.Open(absFilepath)
+		defer file.Close()
+		if err != nil {
+			log.Info("Got error while opening the file ", absFilepath, err)
+			monitoringLogFile.quitCh <- "quit"
+			return
+		}
+
+		reader := bufio.NewReader(file)
+		if monitoringLogFile.reset{
+			log.Info("Reset the monitoring to file ", monitoringLogFile.FileName)
+			monitoringLogFile.reset = false;
+			//skip the lines
+
+			skippedLines := 0
+			for skippedLines < monitoringLogFile.resetLineNumber {
+				_,err := reader.ReadBytes('\n');
+				if err != nil{
+					log.Error("Error while skipping the lines monitoring file reset: ", absFilepath, err);
+				}
+				skippedLines++
 			}
-			compressedFileBeingRead = true
-			defer file.Close()
+			log.Info("Number of lines skipped for reset ", skippedLines)
 		}
-
-		bytes,err := reader.ReadBytes('\n');
-		monitoringLogFile.addLine(bytes)
-		if err != nil{
-			log.Error("Error while reading the monitoring file: ", absFilepath, err);
-			if err == io.EOF{
-				time.Sleep(2000 * time.Millisecond)
-			}else{
+		compressedFileBeingRead := false
+		for{
+			if monitoringLogFile.reset {
+				log.Info("Reset is set, hence resetting the monitoring")
 				break
 			}
+			if !compressedFileBeingRead && len(monitoringLogFile.CompressedFile) > 0 {
+				file, err := monitoringLogFile.switchToCompressedFile()
+				if err != nil{
+					return
+				}
+				compressedFileBeingRead = true
+				defer file.Close()
+			}
+
+			bytes,err := reader.ReadBytes('\n');
+			monitoringLogFile.addLine(bytes)
+			if err != nil{
+				log.Error("Error while reading the monitoring file: ", absFilepath, err);
+				if err == io.EOF{
+					time.Sleep(2000 * time.Millisecond)
+				}else{
+					break
+				}
+			}
+			monitoringLogFile.waitForConsuming()
 		}
-		monitoringLogFile.waitForConsuming()
 	}
 }
 

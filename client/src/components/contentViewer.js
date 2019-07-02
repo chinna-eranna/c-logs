@@ -24,7 +24,7 @@ export class ContentViewer extends Component {
                         <LogsViewer logs={this.props.logs} activeMonitoringApp={this.props.activeMonitoringApp}/>);
                     </Tab>
                     <Tab eventKey="searchResults" title="Search Results">
-                        <SearchResults results={this.props.activeMonitoringApp[0].searchResults}/>
+                        <SearchResults activeMonitoringApp={this.props.activeMonitoringApp[0]}/>
                     </Tab>
                 </Tabs>
 				</div>

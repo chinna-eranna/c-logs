@@ -23,6 +23,7 @@ func Init() {
 	router.HandleFunc("/v1/logDirectories/{id}", removeDirectory).Methods("DELETE")
 	router.HandleFunc("/v1/logDirectories/{id}/start", startMonitoring).Methods("POST")
 	router.HandleFunc("/v1/logDirectories/{id}/search", searchDirectory).Methods("POST")
+	router.HandleFunc("/v1/logDirectories/{id}/reset", resetMonitoring).Methods("POST")
 	log.Fatal(http.ListenAndServe(":13999", router))
 }
 
@@ -157,4 +158,32 @@ func searchDirectory(w http.ResponseWriter, r *http.Request){
 	}else{
 		w.Write(jsonResults)
 	}
+}
+
+func resetMonitoring(w http.ResponseWriter, r *http.Request){
+	log.Info("Invoked POST ", r.URL.Path, "API");
+
+	vars := mux.Vars(r)
+	id, err := strconv.Atoi(vars["id"])
+	if err != nil {
+		log.Error("Invalid directory id for reset: Error -  ", err);
+		//TODO  separate error types for user errors vs application  errors.
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	reqBody,err := ioutil.ReadAll(r.Body)
+	if err != nil {
+		http.Error(w, "Cannot read body", http.StatusBadRequest)
+	}
+
+	resetReq := logs.ResetRequest{}
+	err = json.Unmarshal(reqBody, &resetReq)
+	if err != nil {
+		log.Error("Invalid Json for resetMonitoring API ", string(reqBody), err)
+		http.Error(w, "Cannot unmarshal json", http.StatusBadRequest)
+		return
+	}
+	monitoringFile := logs.Files[id]
+	monitoringFile.ResetMonitoring(resetReq);
 }

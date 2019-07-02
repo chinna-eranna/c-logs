@@ -29,7 +29,7 @@ func GetAppHomeDir()(string){
 }
 
 func FileExists(dir string, filename string)(bool){
-	info, err := os.Stat(filename)
+	info, err := os.Stat(filepath.Join(dir, filename))
     if os.IsNotExist(err) {
         return false
     }

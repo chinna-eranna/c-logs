@@ -64,6 +64,16 @@ function searchInApp(appId, searchString){
     });
 }
 
+function resetMonitoring(appId, file, lineNumber){
+    return new Promise((resolve, reject)=> {
+        axios.post(`/v1/logDirectories/${appId}/reset`, {FileName: file, LineNumber: parseInt(lineNumber)}).then(function(response){
+            resolve(response);
+        }).catch(function(err){
+            reject(err);
+        });
+    });
+}
 
 
-export {monitorHostLogs, getLogDirectories, startMonitoring, getLogMessages, searchInApp}
+
+export {monitorHostLogs, getLogDirectories, startMonitoring, getLogMessages, searchInApp, resetMonitoring}
