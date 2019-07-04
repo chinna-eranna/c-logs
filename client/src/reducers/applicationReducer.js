@@ -68,8 +68,14 @@ export default function application(state = initialState, action){
             break;
         case types.SET_SEARCH_TEXT:
             newState = updateArrayProperty(newState, 'monitoringApps', 'Id', action.payload.id, 'searchText', action.payload.searchText);
+            break;
         case types.SEARCH_RESULTS:
             newState = updateArrayProperty(newState,  'monitoringApps', 'Id', action.payload.id, 'searchResults', action.payload.searchResults);
+            newState = updateArrayProperty(newState,  'monitoringApps', 'Id', action.payload.id, 'contentViewKey','searchResults');
+            break;
+        case types.SELECT_CONTENT_VIEW:
+            newState = updateArrayProperty(newState,  'monitoringApps', 'Id', action.payload.id, 'contentViewKey',action.payload.contentViewKey);
+            break;
         default :
         console.log('default: ' + JSON.stringify(action));
     }

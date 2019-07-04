@@ -5,11 +5,17 @@ import Tabs from 'react-bootstrap/Tabs'
 import Tab from 'react-bootstrap/Tab'
 import LogsViewer  from './logsViewer';
 import SearchResults from './searchResults';
+import * as types from '../actions/actionTypes';
 
 export class ContentViewer extends Component {
 
 	constructor(props){
 		super(props);
+		this.selectView = this.selectView.bind(this);
+	}
+
+	selectView (key){
+		this.props.selectContentView(this.props.activeMonitoringApp[0].Id, key);
 	}
 
 	
@@ -19,7 +25,7 @@ export class ContentViewer extends Component {
 		if (this.props.activeMonitoringApp.length > 0 && this.props.activeMonitoringApp[0].searchResults && this.props.activeMonitoringApp[0].searchResults.length > 0) {
 			return (
 				<div style={{height:'100vh', overflow:'auto'}}>
-                <Tabs defaultActiveKey="searchResults" id="content-viewer">
+                <Tabs id="content-viewer" activeKey={this.props.activeMonitoringApp[0].contentViewKey} onSelect={key => this.selectView(key)} >
                     <Tab eventKey="logs" title="Logs">
                         <LogsViewer logs={this.props.logs} activeMonitoringApp={this.props.activeMonitoringApp}/>);
                     </Tab>
@@ -46,7 +52,7 @@ const mapStateToProps = state => {
 const mapDispatchToProps = dispatch => {
 	console.log("Invoking Content Viewer connect ---");
 	return {
-		
+		selectContentView: (appId, key) => {dispatch({type: types.SELECT_CONTENT_VIEW, payload:{'id': appId, 'contentViewKey':key}})},
 	};
 };
 

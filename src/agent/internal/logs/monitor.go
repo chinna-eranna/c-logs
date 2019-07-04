@@ -111,7 +111,7 @@ func (monitoringLogFile *MonitoringLogFile) readLogFile(){
 			//skip the lines
 
 			skippedLines := 0
-			for skippedLines < monitoringLogFile.resetLineNumber {
+			for skippedLines < monitoringLogFile.resetLineNumber - 1 {
 				_,err := reader.ReadBytes('\n');
 				if err != nil{
 					log.Error("Error while skipping the lines monitoring file reset: ", absFilepath, err);

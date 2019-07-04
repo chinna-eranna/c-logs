@@ -10,13 +10,13 @@ import (
 	"strconv"
 	"agent/internal/logs"
 	"agent/internal/utils"
-
+	"github.com/gobuffalo/packr"
 )
 
-func Init() {
+func Init(box packr.Box) {
 	log.Println("Initializing API router")
 	router := mux.NewRouter()
-	router.HandleFunc("/", http.FileServer(http.Dir(".")).ServeHTTP).Methods("GET")
+	router.HandleFunc("/", http.FileServer(box).ServeHTTP).Methods("GET")
 	router.HandleFunc("/v1/logDirectories/{id}/logs", getLogs).Methods("GET")
 	router.HandleFunc("/v1/logDirectories", addDirectory).Methods("POST")
 	router.HandleFunc("/v1/logDirectories", getAll).Methods("GET")

@@ -77,6 +77,7 @@ export function reset(app, file, lineNumber){
             console.log("Successfully reset monitoring");
             dispatch({type: types.CLEAR_LOGS, payload: {id: app.Id}})
             dispatch({type: types.START_TAIL, payload: {id: app.Id}})
+            dispatch({type: types.SELECT_CONTENT_VIEW, payload:{'id': app.Id, 'contentViewKey':'logs'}})
         }, function(err){
             console.log("Error while reset monitoring - ", err);
         })
