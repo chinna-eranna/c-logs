@@ -16,6 +16,7 @@ import (
 
 type MonitoringLogFile struct{
 	Directory string
+	FilePattern string
 	FileName string
 	Lines chan string
 	Offset int
@@ -29,6 +30,7 @@ type MonitoringLogFile struct{
 	reset bool
 	resetLineNumber int
 	start bool
+	nextFile bool
 }
 
 type ResetRequest struct{
@@ -61,7 +63,7 @@ func MonitorLogPath(logDirectory utils.LogDirectory) (MonitoringLogFile, error){
 	quitCh := make(chan string, 1)
 	linesReadCh := make(chan string, 1000)
 	linesConsumeTracker := make(chan int64, 1000)
-	monitoringLogFile := MonitoringLogFile{dir, latestFile, linesReadCh, 0, "", linesConsumeTracker, 0, quitCh, false, 0, true}
+	monitoringLogFile := MonitoringLogFile{dir,monFilePattern, latestFile, linesReadCh, 0, "", linesConsumeTracker, 0, quitCh, false, 0, true, false}
 	Files[logDirectory.Id] = &monitoringLogFile
 	
 	go monitoringLogFile.readLogFile()
@@ -87,10 +89,27 @@ func (monitoringLogFile *MonitoringLogFile) ResetMonitoring(resetReq ResetReques
 }
 
 func (monitoringLogFile *MonitoringLogFile) readLogFile(){
-	for monitoringLogFile.start  || /*monitoringLogFile.nextFile ||*/ monitoringLogFile.reset {
+	for monitoringLogFile.start  || monitoringLogFile.nextFile || monitoringLogFile.reset {
 
 		if monitoringLogFile.start {
-			monitoringLogFile.start = false;
+			monitoringLogFile.start = false
+		}
+		
+		if(monitoringLogFile.nextFile){
+			nextFile, err := utils.FindNextFile(monitoringLogFile.Directory,
+				monitoringLogFile.FileName,monitoringLogFile.FilePattern)
+			if err != nil {
+				log.Info("Got error while fetching next file ", err)
+				monitoringLogFile.quitCh <- "quit"
+				return
+			}
+			if nextFile != ""{
+				monitoringLogFile.nextFile  = false
+				monitoringLogFile.FileName = nextFile
+			}else{
+				time.Sleep(2000 * time.Millisecond)
+				continue
+			}
 		}
 
 		absFilepath := filepath.Join(monitoringLogFile.Directory, monitoringLogFile.FileName)
@@ -141,9 +160,10 @@ func (monitoringLogFile *MonitoringLogFile) readLogFile(){
 				log.Error("Error while reading the monitoring file: ", absFilepath, err);
 				if err == io.EOF{
 					time.Sleep(2000 * time.Millisecond)
-				}else{
-					break
+					monitoringLogFile.nextFile = true
 				}
+				break
+				
 			}
 			monitoringLogFile.waitForConsuming()
 		}

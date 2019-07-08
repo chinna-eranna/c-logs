@@ -13,6 +13,7 @@ import (
 	"regexp"
 	"bytes"
 	"compress/gzip"
+	"strings"
 	"os/exec")
 
 func EnsureAppHomeDir(){
@@ -34,6 +35,47 @@ func FileExists(dir string, filename string)(bool){
         return false
     }
     return !info.IsDir()
+}
+
+func FindNextFile(dir string, currentFile string, filePattern string)(string, error){
+	file, err := os.Stat(filepath.Join(dir, currentFile))
+	if err != nil {
+		log.Error("Error while opening the currentFile - ", currentFile, err);
+		return "", err
+	}
+
+	filesCh, err  := ioutil.ReadDir(dir)
+	if err != nil{
+		log.Error("FindNextFile():Error while listing files in directory", dir, err)
+		return "", err
+	}
+	
+	nextFile := file
+	foundNextFile:= false
+	for _,f := range filesCh {
+		if strings.HasSuffix(f.Name(), ".swp") {
+			continue
+		}
+		fileMatch, regexErr := regexp.MatchString(filePattern, f.Name())
+		if regexErr != nil  {
+			log.Error("findLatestFile():Error while matching the pattern ", filePattern, " with file ", f.Name(), " -- Error:  ", regexErr)
+			return "", regexErr
+		}
+		if fileMatch {
+			log.Info("Next File to compare - ", f.Name(), " Timestamp - ", f.ModTime().Unix(), 
+				" currentFile Timestamp - ", file.ModTime().Unix(), " Current Next File Timestamp - ", nextFile.ModTime().Unix())
+			if f.ModTime().Unix() > file.ModTime().Unix() && (!foundNextFile  || f.ModTime().Unix() <= nextFile.ModTime().Unix()){
+				nextFile = f
+				foundNextFile =  true
+			}
+		}
+	}
+	log.Info("Current File: ", currentFile, " Next file: ", nextFile.Name())
+	if foundNextFile{
+		return nextFile.Name(), nil
+	}else{
+		return "", nil
+	}
 }
 
 func FindLatestFile(dir string, filePattern string)(string, error){
