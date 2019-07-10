@@ -45,13 +45,6 @@ export function monitorAppLog(app){
     }
 }
 
-export  function tailContent(app){
-    return dispatch => {
-        console.log("Invoked tailContent");
-        getLogMessages(app.Id).then((response) => {logsResponseHandler(app, dispatch, response)});
-    }
-}
-
 export function search(app) {
     return dispatch => {
         console.log("Starting search for app ", app.Name, " with search text ", app.searchText);
@@ -84,20 +77,24 @@ export function reset(app, file, lineNumber){
     }
 }
 
-var getLogs = _.debounce(_getLogs, 3000, {leading: true, trailing: false});
-
-function _getLogs(app, dispatch){
+function getLogs(app, dispatch){
     console.log("getLogs: app: " + JSON.stringify(app));
     dispatch({type: types.FETCH_LOGS_START, payload: {id:app.Id}});
     getLogMessages(app.Id).then((response) => {logsResponseHandler(app, dispatch, response)});
 }
 
 function logsResponseHandler(app, dispatch, response){
-        if(response.data.length == 0){
-            console.log("No Logs to fetch");
-        }else{
+        var logsLinesCount = 0;
+        if(response && response.data && response.data != null && response.data.length > 0){
             console.log("Got logs in logsResponseHandler");
             dispatch({type: types.LOGS_MESSAGES, payload: {appId:app.Id, logs:response.data}});
+            dispatch({type:  types.FETCH_LOGS_END, payload: {id:app.Id, logsCount:response.data.length}});
+            logsLinesCount = response.data.length;
+        }else{
+            console.log("No Logs to fetch");
+            if(!response.throttled){
+                dispatch({type:  types.FETCH_LOGS_END, payload: {id:app.Id, logsCount:0}});
+            }
         }
-        dispatch({type:  types.FETCH_LOGS_END, payload: {id:app.Id, logsCount:response.data.length}});
+        return logsLinesCount;
 }

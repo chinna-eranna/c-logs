@@ -45,7 +45,7 @@ export class MonitoringAppLogList extends Component {
             const appId = `${app.Id}` ;
             const active = (app.Id === this.props.activeAppId) ? true: false;
             console.log("AppName: "+ app.Name + " Active: " + active);
-            appLogItems.push(<MonitoringDirSettings app={app} logCount={app.tailLogsCount}/>)
+            appLogItems.push(<MonitoringDirSettings app={app} logsCount={app.logsCount}/>)
         }); 
 
         return (

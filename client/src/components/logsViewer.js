@@ -50,7 +50,6 @@ export class LogsViewer extends Component {
 	}
 	onScroll(){
 		var node = this.refs.elem;
-		console.log('scroll! Left: ' + node.scrollLeft + " Top:" + node.scrollTop)
 		this.props.setScrollPosition(node.scrollTop);
 	}
 
@@ -95,7 +94,6 @@ export class LogsViewer extends Component {
 
 
 const mapStateToProps = state => {
-	console.log("Invoking state Logs Viewer connect ---");
 	return {
 		activeAppId: state.application.activeAppId,
 		activeMonitoringApp: state.application.monitoringApps.filter(app => app.Id === state.application.activeAppId),
@@ -104,7 +102,6 @@ const mapStateToProps = state => {
 };
 
 const mapDispatchToProps = dispatch => {
-	console.log("Invoking dispatch Logs Viewer connect ---");
 	return {
 		getMoreLogs: (app)  => {dispatch(actions.getMoreLogs(app));},
 		setScrollPosition:(topPosition) => { dispatch({type: types.SET_SCROLL_POSITION, payload: {'top':topPosition}});}

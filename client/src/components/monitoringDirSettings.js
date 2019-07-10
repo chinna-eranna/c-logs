@@ -29,6 +29,7 @@ export class MonitoringDirSettings extends Component {
         this.search = this.search.bind(this);
         this.continueTail = this.continueTail.bind(this);
         this.searchTextChangeHandler = this.searchTextChangeHandler.bind(this);
+        this.state = {};
    }
 
     selectLogDir(){
@@ -43,6 +44,8 @@ export class MonitoringDirSettings extends Component {
         console.log('Tail new state:', state);
         if(state){
             this.props.startTail(this.props.app.Id);
+            this.setState({tailStartLogsLinesCount: this.props.logsCount});
+            this.continueTail(this.props.app);
         }else{
             this.props.stopTail(this.props.app.Id);
         }
@@ -57,7 +60,11 @@ export class MonitoringDirSettings extends Component {
         }
     }
 	componentDidMount(){
-		
+		if(this.props.app.tail){
+            this.setState({tailStartLogsLinesCount: this.props.logsCount});
+            console.log("component mounting State: " + JSON.stringify(this.state));
+            this.continueTail(this.props.app);
+        }
     }
 
     search(){
@@ -74,8 +81,19 @@ export class MonitoringDirSettings extends Component {
     }
       
     continueTail(app){
-        this.props.tail(app);
+        console.log("Tailing app: " + JSON.stringify(app) + " State: " + JSON.stringify(this.state));
+        console.log("LogsCount :", this.props.logsCount , " tailStartLogsLinesCount : ", this.state.tailStartLogsLinesCount);
+        console.log("this.state.tailStartLogsLinesCount :", this.state.tailStartLogsLinesCount , " Difference : ", (this.props.logsCount - this.state.tailStartLogsLinesCount));
+        if(this.state.tailStartLogsLinesCount != undefined && ((this.props.logsCount - this.state.tailStartLogsLinesCount) >= 300)){
+            console.log("Stopping the trail");
+            this.props.stopTail(app.Id);
+            return;
+        }else{
+            this.props.getMoreLogs(app);
+            setTimeout(() => {this.continueTail(app)}, 2000);
+        }
     }
+
 
 	render() {
         let backgroundColor = 'white';
@@ -83,11 +101,7 @@ export class MonitoringDirSettings extends Component {
         if(this.props.app.Id === this.props.activeAppId){
             backgroundColor = 'lightblue'
         }
-        console.log("Before render DisplaySettings Value: ", this.props.app.displaySettings);
-
-        if(this.props.app.tail){
-            this.continueTail(this.props.app);
-        }
+        
         const searchText = this.props.app.searchText  ? this.props.app.searchText :  '';
         if(this.props.app.displaySettings){
             settingsContent = ( 
@@ -161,6 +175,7 @@ const mapDispatchToProps = dispatch => {
         tail: (app)  => {dispatch(actions.tailContent(app));},
         startTail: (appId) => { dispatch({type: types.START_TAIL, payload: {'id':appId}});},
         stopTail: (appId) => { dispatch({type: types.STOP_TAIL, payload: {'id':appId}});},
+        getMoreLogs: (app)  => {dispatch(actions.getMoreLogs(app));},
         search:  (app) => {dispatch(actions.search(app));},
 	};
 };

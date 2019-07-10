@@ -18,7 +18,7 @@ function  getLogDirectories(){
             console.log("Applications from ajax: " + JSON.stringify(response));
             resolve(response);
         }).catch(function(err){
-            console.log("fetchApplicatio    ns()::Error from ajax: " + err);
+            console.log("fetchApplications()::Error from ajax: " + err);
             reject(err);
         });
     }); 
@@ -37,20 +37,26 @@ function startMonitoring(appId){
     });
 }
 
-function getLogMessagesReq(appId, resolve, reject){
-    axios.get(`/v1/logDirectories/${appId}/logs`).then(function(response){
-        console.log("Got logs: " + JSON.stringify(response));
-        resolve(response);
-    }).catch(function(err){
-        console.log("getLogs()::Error from ajax: " + err);
-        reject(err);
-    });
-}
+var logMsgRequests = {};
 
 function getLogMessages(appId){
     return new Promise((resolve, reject) => { 
+            if(logMsgRequests[appId]){
+                console.log("Throttled getLogMessages for App :" + appId);
+                resolve({throttled:true, data:[]});
+                return;
+            }
             //add content-type header
-            getLogMessagesReq(appId, resolve, reject);
+            logMsgRequests[appId] = true;
+            axios.get(`/v1/logDirectories/${appId}/logs`).then(function(response){
+                console.log("Got logs: " + JSON.stringify(response));
+                resolve(response);
+                logMsgRequests[appId]  = false;
+            }).catch(function(err){
+                console.log("getLogs()::Error from ajax: " + err);
+                reject(err);
+                logMsgRequests[appId] = false;
+            });
     });
 }
 

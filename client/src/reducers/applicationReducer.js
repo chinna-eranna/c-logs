@@ -19,7 +19,7 @@ export default function application(state = initialState, action){
         case types.MONITOR_APP_LOG:
             const monitoringApp = action.payload;
             monitoringApp.tail = true;
-            monitoringApp.tailLogsCount = 0;
+            monitoringApp.logsCount = 0;
             monitoringApp.displaySettings = false;
             newState = dotProp.set(state, 'monitoringApps', list => [...list, monitoringApp]);
             newState = dotProp.set(newState, 'logs_' + monitoringApp.Id, []);
@@ -38,17 +38,12 @@ export default function application(state = initialState, action){
                 return monApp.Id === action.payload.id;
             })
             if(app && app.length > 0){
-                app[0].tailLogsCount = app[0].tailLogsCount + action.payload.logsCount;
-                if(app[0].tailLogsCount  >= 1000){
-                    app[0].tail = false;
-                    console.log("Reducer stopping the tail, as it has got 1000 log messages");
-                }
+                newState = updateArrayProperty(newState, 'monitoringApps', 'Id', action.payload.id, 'logsCount', app[0].logsCount + action.payload.logsCount);
             }
             newState = updateArrayProperty(newState, 'monitoringApps', 'Id', action.payload.id, 'loading', false);
             break;
         case types.START_TAIL:
             newState = updateArrayProperty(newState, 'monitoringApps', 'Id', action.payload.id, 'tail', true);
-            newState = updateArrayProperty(newState, 'monitoringApps', 'Id', action.payload.id, 'tailLogsCount', 0);
             break;
         case types.STOP_TAIL:
             newState = updateArrayProperty(newState, 'monitoringApps', 'Id', action.payload.id, 'tail', false);

@@ -50,7 +50,6 @@ const mapStateToProps = state => {
 };
 
 const mapDispatchToProps = dispatch => {
-	console.log("Invoking Content Viewer connect ---");
 	return {
 		selectContentView: (appId, key) => {dispatch({type: types.SELECT_CONTENT_VIEW, payload:{'id': appId, 'contentViewKey':key}})},
 	};
