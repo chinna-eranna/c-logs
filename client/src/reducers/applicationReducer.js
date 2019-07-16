@@ -1,6 +1,7 @@
 import initialState from './initialState';
 import * as types from '../actions/actionTypes';
 import * as dotProp from 'dot-prop-immutable';
+import _ from 'lodash'
 
 export default function application(state = initialState, action){
     let newState = state;
@@ -11,7 +12,11 @@ export default function application(state = initialState, action){
             newState = dotProp.set(state, 'availableApps', action.payload);
             console.log("NewState:  " + JSON.stringify(newState));
             break;
-
+        case types.FILES_LIST:
+            console.log('Got files list: ' + JSON.stringify(action));
+            const sortedFileList = _.sortBy(action.payload.filesList, function(o) { return o.LastModified * -1; })
+            newState = dotProp.set(state, 'filesList', sortedFileList);
+            break;
         case types.SET_HOST:
             newState = dotProp.set(state, 'host', action.payload.host);
             console.log("NewState:  " + JSON.stringify(newState));

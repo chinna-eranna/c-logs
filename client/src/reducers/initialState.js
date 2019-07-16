@@ -32,5 +32,6 @@ export default {
     availableApps: [],
     monitoringApps: [],
     host: '',
-    logs:[]
+    logs:[],
+    filesList:[]
 }

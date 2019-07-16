@@ -24,6 +24,7 @@ func Init(box packr.Box) {
 	router.HandleFunc("/v1/logDirectories/{id}/start", startMonitoring).Methods("POST")
 	router.HandleFunc("/v1/logDirectories/{id}/search", searchDirectory).Methods("POST")
 	router.HandleFunc("/v1/logDirectories/{id}/reset", resetMonitoring).Methods("POST")
+	router.HandleFunc("/v1/files/{rest:.*}", getFiles).Queries("pattern", "{pattern}").Methods("GET")
 	log.Fatal(http.ListenAndServe(":13999", router))
 }
 
@@ -121,8 +122,20 @@ func startMonitoring(w http.ResponseWriter, r *http.Request){
 		return
 	}
 
+	reqBody,err := ioutil.ReadAll(r.Body)
+	if err != nil {
+		http.Error(w, "Cannot read body", http.StatusBadRequest)
+	}
+	startMonitoringRequest := logs.StartMonitoringRequest{}
+	err = json.Unmarshal(reqBody, &startMonitoringRequest)
+	if err != nil {
+		log.Error("Invalid Json for startMonitoring API ", string(reqBody), err)
+		http.Error(w, "Cannot unmarshal json", http.StatusBadRequest)
+		return
+	}
+
 	logDirectory := utils.GetLogDirectory(id)
-	logs.MonitorLogPath(logDirectory)
+	logs.MonitorLogPath(logDirectory, startMonitoringRequest)
 }
 
 func searchDirectory(w http.ResponseWriter, r *http.Request){
@@ -161,7 +174,7 @@ func searchDirectory(w http.ResponseWriter, r *http.Request){
 }
 
 func resetMonitoring(w http.ResponseWriter, r *http.Request){
-	log.Info("Invoked POST ", r.URL.Path, "API");
+	log.Info("Invoked POST ", r.URL.Path, "API")
 
 	vars := mux.Vars(r)
 	id, err := strconv.Atoi(vars["id"])
@@ -186,4 +199,42 @@ func resetMonitoring(w http.ResponseWriter, r *http.Request){
 	}
 	monitoringFile := logs.Files[id]
 	monitoringFile.ResetMonitoring(resetReq);
+}
+
+func getFiles(w http.ResponseWriter, r *http.Request){
+	log.Info("Invoked GET ", r.URL.Path, " API")
+	
+	getFilesReq := utils.GetFilesRequest{"/" + mux.Vars(r)["rest"], r.FormValue("pattern")}
+	log.Info("GetFilesReq Dir:  ", getFilesReq.Dir + "  Pattern: ", getFilesReq.Pattern)
+	
+	files,err := utils.GetMatchingFiles(getFilesReq.Dir, getFilesReq.Pattern, false)
+	if err != nil {
+		log.Error("Error while getting files ", r.URL.Path , " : Error -  ", err);
+		//TODO  separate error types for user errors vs application  errors.
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	writeJson(files, w)
+}
+/*
+func getId( r *http.Request){
+	vars := mux.Vars(r)
+	id, err := strconv.Atoi(vars["id"])
+	if err != nil {
+		log.Error("Invalid id for request ", r.URL.Path , " : Error -  ", err);
+		//TODO  separate error types for user errors vs application  errors.
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return nil,err
+	}
+	return id,nil
+}
+*/
+func writeJson(response interface{}, w http.ResponseWriter){
+	jsonResponse, err := json.MarshalIndent(response, " ", " ")
+	if(err != nil){
+		log.Error("Error while parsing response - ", err)
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+	}else{
+		w.Write(jsonResponse)
+	}
 }

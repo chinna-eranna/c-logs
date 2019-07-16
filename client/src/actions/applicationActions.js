@@ -1,5 +1,5 @@
 import * as types from './actionTypes';
-import {monitorHostLogs, getLogDirectories, startMonitoring, getLogMessages, searchInApp, resetMonitoring} from '../services/appLogServices'
+import {monitorHostLogs, getLogDirectories, startMonitoring, getLogMessages, searchInApp, resetMonitoring, getFiles} from '../services/appLogServices'
 
 export function monitorHost(host){
     return dispatch => {
@@ -32,10 +32,10 @@ export function fetchApplications(){
 }
 
 
-export function monitorAppLog(app){
+export function monitorAppLog(app, startLogFile){
     return dispatch => {
         //TODO a progress bar should be displayed before starting the monitoring
-        startMonitoring(app.Id).then(function(response){
+        startMonitoring(app.Id, startLogFile).then(function(response){
            dispatch({type: types.MONITOR_APP_LOG, payload: app});
            console.log("Invoking getLogs in success response handler of startMonitoring for app  " + JSON.stringify(app)) ; 
            getLogs(app, dispatch);
@@ -73,7 +73,22 @@ export function reset(app, file, lineNumber){
             dispatch({type: types.SELECT_CONTENT_VIEW, payload:{'id': app.Id, 'contentViewKey':'logs'}})
         }, function(err){
             console.log("Error while reset monitoring - ", err);
-        })
+        });
+    }
+}
+
+export function fetchFiles(directory, filePattern){
+    return dispatch => {
+        getFiles(directory, filePattern).then(function(response){
+            console.log(`Got files  for directory ${directory}`);
+            if(response && response.data && response.data != null && response.data.length > 0){
+                dispatch({type: types.FILES_LIST, payload: {filesList: response.data}});
+            }else{
+                console.log("No Files to list");
+            }
+        }, function(err){
+            console.log(`Error while getFiles for directory ${directory} - `, err);
+        });
     }
 }
 

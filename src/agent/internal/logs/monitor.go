@@ -38,6 +38,10 @@ type ResetRequest struct{
 	LineNumber int
 }
 
+type StartMonitoringRequest struct{
+	StartFrom string
+}
+
 var Files map[int]*MonitoringLogFile
 
 func Init(){
@@ -51,19 +55,27 @@ func Init(){
 	*/
 }
 
-func MonitorLogPath(logDirectory utils.LogDirectory) (MonitoringLogFile, error){
+func MonitorLogPath(logDirectory utils.LogDirectory, startMonitoringReq StartMonitoringRequest) (MonitoringLogFile, error){
 	log.Info("Starting monitoring log  ", logDirectory)
 	dir := logDirectory.Directory
 	monFilePattern := logDirectory.LogFilePattern
-	latestFile,err := utils.FindLatestFile(dir, monFilePattern)
-	if(err != nil){
-		return MonitoringLogFile{}, err
+	var err error
+	var startFile string
+	if startMonitoringReq.StartFrom === 'New Logs' {
+		startFile,err = utils.FindLatestFile(dir, monFilePattern)
+		if(err != nil){
+			return MonitoringLogFile{}, err
+		}
+	}else if (startMonitoringReq.StartFrom === 'All Logs'){
+		//find oldest file
+	}else{
+		startFile = startMonitoringReq.StartFrom
 	}
 
 	quitCh := make(chan string, 1)
 	linesReadCh := make(chan string, 1000)
 	linesConsumeTracker := make(chan int64, 1000)
-	monitoringLogFile := MonitoringLogFile{dir,monFilePattern, latestFile, linesReadCh, 0, "", linesConsumeTracker, 0, quitCh, false, 0, true, false}
+	monitoringLogFile := MonitoringLogFile{dir,monFilePattern, startFile, linesReadCh, 0, "", linesConsumeTracker, 0, quitCh, false, 0, true, false}
 	Files[logDirectory.Id] = &monitoringLogFile
 	
 	go monitoringLogFile.readLogFile()

@@ -16,3 +16,4 @@ export const STOP_TAIL = 'STOP_TAIL';
 export const SET_SEARCH_TEXT = 'SET_SEARCH_TEXT';
 export const SEARCH_RESULTS = 'SEARCH_RESULTS';
 export const SELECT_CONTENT_VIEW = 'SELECT_CONTENT_VIEW'
+export const FILES_LIST = 'FILES_LIST'

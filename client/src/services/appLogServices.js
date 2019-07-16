@@ -24,10 +24,10 @@ function  getLogDirectories(){
     }); 
 }
 
-function startMonitoring(appId){
+function startMonitoring(appId, startFrom){
     return new Promise((resolve, reject) => { 
             //add content-type header
-            axios.post(`/v1/logDirectories/${appId}/start`).then(function(response){
+            axios.post(`/v1/logDirectories/${appId}/start`, {StartFrom: startFrom}).then(function(response){
             console.log("started monitoring log for logDirectories/" + appId);
             resolve(response);
         }).catch(function(err){
@@ -80,6 +80,18 @@ function resetMonitoring(appId, file, lineNumber){
     });
 }
 
+function getFiles(directory, filePattern) {
+    return new Promise((resolve, reject) => {
+        axios.get(`/v1/files/${directory}?pattern=${filePattern}`).then(function (response) {
+            console.log("Got files: " + JSON.stringify(response));
+            resolve(response);
+        }).catch(function (err) {
+            console.log("getFiles()::Error from ajax: " + err);
+            reject(err);
+        });
+    });
+}
 
 
-export {monitorHostLogs, getLogDirectories, startMonitoring, getLogMessages, searchInApp, resetMonitoring}
+
+export {monitorHostLogs, getLogDirectories, startMonitoring, getLogMessages, searchInApp, resetMonitoring, getFiles}

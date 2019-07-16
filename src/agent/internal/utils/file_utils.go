@@ -16,6 +16,16 @@ import (
 	"strings"
 	"os/exec")
 
+type GetFilesRequest struct{
+	Dir string
+	Pattern string
+}
+
+type GetFilesResponse struct{
+	Name string
+	LastModified int64
+}
+
 func EnsureAppHomeDir(){
 	homeDir, _ := homedir.Dir()
 	log.Info("Home directory of user ", homeDir)
@@ -162,22 +172,37 @@ func GunzipFile(gzFilePath, dstFilePath string) (int64, error) {
     return written, nil
 }
 
-func getMatchingFiles(dir string, filePattern string)([]string, error){
-	var matchingFiles []string
+
+func GetMatchingFiles(dir string, filePattern string, fullpath bool)([]GetFilesResponse, error){
+	var matchingFiles []GetFilesResponse
 	filesCh, err  := ioutil.ReadDir(dir)
 	if err != nil{
 		log.Error("getMatchingFiles():Error while listing files in directory", dir, err)
 		return matchingFiles, err
 	}
-	
+	//loc, _ := time.LoadLocation("Asia/Kolkata")
+
 	for _, f := range filesCh {
+		if strings.HasSuffix(f.Name(), ".swp") {
+			continue
+		}
+
+		matchingFile := f.Name()
+		if fullpath {
+			matchingFile = filepath.Join(dir, f.Name())
+		}
+		if filePattern == "" {
+			matchingFiles = append(matchingFiles, GetFilesResponse{matchingFile, f.ModTime().Unix()})
+			continue
+		}
+
 		fileMatch, regexErr := regexp.MatchString(filePattern, f.Name())
 		if regexErr != nil  {
 			log.Error("getMatchingFiles():Error while matching the pattern ", filePattern, " with file ", f.Name(), " -- Error:  ", regexErr)
 			return matchingFiles, regexErr
 		}
 		if  fileMatch {
-			matchingFiles = append(matchingFiles, filepath.Join(dir, f.Name()))
+			matchingFiles = append(matchingFiles, GetFilesResponse{matchingFile, f.ModTime().Unix()})
 		}else {
 			log.Info("Ignoring file ", f.Name(), " as the name didn't match with pattern ", filePattern)
 		}
@@ -187,7 +212,13 @@ func getMatchingFiles(dir string, filePattern string)([]string, error){
 }
 
 func SearchLogs(directory string, filePattern string, searchString string)([]SearchResult){
-	filesToSearch, _ := getMatchingFiles(directory, filePattern)
+	matchingFiles, _ := GetMatchingFiles(directory, filePattern, true)
+	
+	var filesToSearch []string
+	for _,eachFile := range matchingFiles {
+		filesToSearch = append(filesToSearch, eachFile.Name)
+	}
+
 	args := []string{"-n", searchString,}
 	args = append(args, filesToSearch...)
 	cmd := exec.Command("grep", args...)
