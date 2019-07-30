@@ -6,6 +6,7 @@ const htmlWebpackPlugin = new HtmlWebPackPlugin({
 });
 
 module.exports = {
+  //mode: 'development',
   output: {
     path: __dirname + '/dist',
     filename: 'client.js'

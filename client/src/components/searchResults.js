@@ -22,9 +22,14 @@ export class SearchResults extends Component {
     }
 
     render(){
-        let searchResultContent = this.props.activeMonitoringApp.searchResults.map((result) => {
-            return (<div><span style={{cursor: 'pointer', paddingRight:'3px', background:'gray'}} onClick={() => this.showLogs(this.getName(result.Name), result.Line)}>[{this.getName(result.Name)}:{result.Line}]</span> {result.Text}</div>)
-        })
+        let searchResultContent = '';
+        if(this.props.activeMonitoringApp.searchInProgress){
+            searchResultContent = 'Searching logs...'
+        }else{
+            searchResultContent = this.props.activeMonitoringApp.searchResults.map((result) => {
+                return (<div><span style={{cursor: 'pointer', paddingRight:'3px', background:'gray'}} onClick={() => this.showLogs(this.getName(result.Name), result.Line)}>[{this.getName(result.Name)}:{result.Line}]</span> {result.Text}</div>)
+            })
+        }
         return (<div style={{overflow:'auto'}}>{searchResultContent}</div>)
     }
 }

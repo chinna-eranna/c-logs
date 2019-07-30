@@ -5,19 +5,35 @@ import (
     "net/http"
 	"github.com/gorilla/mux"
 	"fmt"
+	//"os"
 	"io/ioutil"
 	"encoding/json"
 	"strconv"
+	//"time"
+	//"path/filepath"
 	"agent/internal/logs"
 	"agent/internal/utils"
 	"github.com/gobuffalo/packr"
 )
 
 func Init(box packr.Box) {
+	/*
+	appHomeDir := utils.GetAppHomeDir()
+	f, err := os.OpenFile(filepath.Join(appHomeDir, "/clogs.log_" + time.Now().Format(time.RFC3339) ), os.O_APPEND | os.O_CREATE | os.O_RDWR, 0666)
+    if err != nil {
+        fmt.Printf("error opening file: %v", err)
+	}
+	log.SetFormatter(&log.TextFormatter{
+		DisableColors: true,
+		FullTimestamp: true,
+	})
+	log.SetOutput(f)
+	
+	*/
 	log.Println("Initializing API router")
 	router := mux.NewRouter()
 	router.HandleFunc("/", http.FileServer(box).ServeHTTP).Methods("GET")
-	router.HandleFunc("/v1/logDirectories/{id}/logs", getLogs).Methods("GET")
+	router.HandleFunc("/v1/logDirectories/{id}/logs", getLogs).Queries("fullContent", "{fullContent}").Methods("GET")
 	router.HandleFunc("/v1/logDirectories", addDirectory).Methods("POST")
 	router.HandleFunc("/v1/logDirectories", getAll).Methods("GET")
 	router.HandleFunc("/v1/logDirectories/{id}", removeDirectory).Methods("DELETE")
@@ -45,13 +61,50 @@ func getLogs(w http.ResponseWriter, r *http.Request){
 		//TODO  separate error types for user errors vs application  errors.
 		http.Error(w, "Invalid directory for Monitoring start", http.StatusBadRequest)
 	}
-	logMessages := monitoringFile.GetLogs()
-	logMessagesJson,err := json.MarshalIndent(logMessages, " ", " ")
-	if(err != nil){
-		log.Error("Error while fetching logs - ", err)
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+	fullContent, err := strconv.ParseBool(r.FormValue("fullContent"))
+	if err != nil {
+		log.Error("Invalid value for query param fullContent -  ", r.FormValue("fullContent"));
+		//TODO  separate error types for user errors vs application  errors.
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	if fullContent {
+		
+		w.Header().Set("Content-Type", "application/json")
+		fileContentCh, err := utils.GetFileContents(monitoringFile.Directory, monitoringFile.FileName)
+		if err != nil {
+			log.Error("Error while reading file contents - ", err)
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+		}else{
+			w.Write([]byte("["))
+			notFirst := false;
+			for {
+				j, more := <-fileContentCh
+				//log.Info("Got content: ", j , " and more: ", more)
+				if more {
+					if notFirst {
+						w.Write([]byte(","))
+					}else {
+						notFirst = true
+					}
+					w.Write([]byte(j))
+				} else {
+					w.Write([]byte("]"))
+					break
+				}
+			}
+		}
+
 	}else{
-		w.Write(logMessagesJson)
+		logMessages := monitoringFile.GetLogs()
+		logMessagesJson,err := json.MarshalIndent(logMessages, " ", " ")
+		if(err != nil){
+			log.Error("Error while fetching logs - ", err)
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+		}else{
+			w.Write(logMessagesJson)
+		}
 	}
 }
 

@@ -50,9 +50,8 @@ export class MonitoringAppLogList extends Component {
 
         return (
             <div style={{textAlign:'center'}}>
-                <hr style={{border:'3px solid blue'}}/>
-                Monitoring Log Directories
-                <hr style={{border:'3px solid blue'}}/>
+                <hr style={{border:'2px solid #ffc107'}}/>
+               
 
                 <AddApplication/>
   

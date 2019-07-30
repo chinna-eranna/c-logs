@@ -16,15 +16,20 @@ import ModalHeader from 'react-bootstrap/ModalHeader'
 import ModalTitle from 'react-bootstrap/ModalTitle'
 import ModalBody from 'react-bootstrap/ModalBody'
 import ModalFooter from 'react-bootstrap/ModalFooter'
+import Form from 'react-bootstrap/Form'
 
 import * as actions from '../actions/applicationActions'
 import moment from 'moment'
+import '../css/app.css'
 
 
 export class AddApplication extends Component {
 
 	constructor(props) {
 		super(props);
+		this.newLogs = 'New Logs';
+		this.allLogs = 'All Logs';
+
 		this.selectApplication = this.selectApplication.bind(this);
 		this.selectLog = this.selectLog.bind(this);
 		this.getAvailableApps = this.getAvailableApps.bind(this);
@@ -32,8 +37,8 @@ export class AddApplication extends Component {
 		this.handleCancelAppLog = this.handleCancelAppLog.bind(this);
 		this.addApplication = this.addApplication.bind(this);
 		this.getStartFromContent = this.getStartFromContent.bind(this);
-		this.state = { selectApplication: false, selectedApp: '-None-', startLogFile:'New Logs' };
-
+		this.readFullFileContent = this.readFullFileContent.bind(this);
+		this.state = { selectApplication: false, selectedApp: '-None-', startLogFile:this.newLogs };
 	}
 	handleAddAppLog() {
 		if (this.state.selectedApp === '-None-') {
@@ -94,16 +99,19 @@ export class AddApplication extends Component {
 		let selectedApp = this.state.selectedApp ? this.state.selectedApp : '-None-';
 		let selectAppContent = (<DropdownButton size="sm" as={InputGroup.Prepend} variant="outline-secondary"
 			title={selectedApp} id="input-group-dropdown-1" onSelect={this.selectApplication} >
+			<div style={{maxHeight:'10em', overflowY:  'scroll'}}>
 			{availableAppsContent}
+			</div>
 		</DropdownButton>);
 
 
 		let startFromContent = this.getStartFromContent();
+		let readFullFileContent = this.readFullFileContent();
 		return (
 			<div>
 				<InputGroup size="sm" className="mb-3">
 					<InputGroup.Prepend>
-						<InputGroup.Text id="basic-addon1">Choose Directory</InputGroup.Text>
+						<InputGroup.Text id="basic-addon1">Choose Application</InputGroup.Text>
 					</InputGroup.Prepend>
 					{selectAppContent}
 				</InputGroup>
@@ -114,6 +122,7 @@ export class AddApplication extends Component {
 					</InputGroup.Prepend>
 					{startFromContent}
 				</InputGroup>
+				{readFullFileContent}
 			</div>
 		);
 	}
@@ -122,11 +131,10 @@ export class AddApplication extends Component {
 		if (this.state.selectedApp === '-None-') {
 			return '';
 		}
-		let newLogs = 'New Logs'
-		let allLogs = 'All Logs'
+		
 		let startLogContent = []
-		startLogContent.push(<Dropdown.Item size="sm" eventKey={newLogs} key={newLogs}>{newLogs}</Dropdown.Item>)
-		startLogContent.push(<Dropdown.Item size="sm" eventKey={allLogs} key={allLogs}>{allLogs}</Dropdown.Item>)
+		startLogContent.push(<Dropdown.Item size="sm" eventKey={this.newLogs} key={this.newLogs}>{this.newLogs}</Dropdown.Item>)
+		startLogContent.push(<Dropdown.Item size="sm" eventKey={this.allLogs} key={this.allLogs}>{this.allLogs}</Dropdown.Item>)
 		
 		for(let index in this.props.filesList){
 			const file = this.props.filesList[index]
@@ -136,11 +144,21 @@ export class AddApplication extends Component {
 
 		let startFromContent = (<DropdownButton size="sm" as={InputGroup.Prepend} variant="outline-secondary"
 			title={this.state.startLogFile} id="input-group-dropdown-1" onSelect={this.selectLog} >
+			<div style={{maxHeight:'10em', overflowY:  'scroll'}}>
 			{startLogContent}
+			</div>
 		</DropdownButton>);
 		return startFromContent;
 	}
 
+	readFullFileContent(){
+		if(this.state.startLogFile &&  this.state.startLogFile !== this.newLogs && this.state.startLogFile !== this.allLogs) {
+			return  <Form.Check  style={{ color: 'black' }} type="checkbox" label="Read selected files full content on start" />
+		}
+		else{
+			return '';
+		}
+	}
 	render() {
 		let chooseApplicationContent = (
 			<Modal show={true} onHide={this.handleCancelAppLog}
@@ -150,7 +168,7 @@ export class AddApplication extends Component {
 			>
 				<Modal.Header closeButton>
 					<Modal.Title id="contained-modal-title-vcenter">
-						Choose Application to Monitor
+						<div style={{color: 'black'}}>Choose Application to view logs</div>
           			</Modal.Title>
 				</Modal.Header>
 				<Modal.Body>
@@ -173,7 +191,7 @@ export class AddApplication extends Component {
 		if (this.state.selectApplication) {
 			addAppContent = chooseApplicationContent;
 		} else {
-			addAppContent = (<Button variant="primary" size="sm" onClick={this.addApplication}>Add Directory</Button>);
+			addAppContent = (<Button variant="warning" size="sm" onClick={this.addApplication}>Add Application</Button>);
 		}
 
 		return addAppContent;

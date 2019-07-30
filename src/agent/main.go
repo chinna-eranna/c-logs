@@ -11,7 +11,7 @@ import log "github.com/Sirupsen/logrus"
 
 
 func  main(){
-	log.Println("Starting V-logs app")
+	log.Println("Starting C-Logs app")
 	box := packr.NewBox("./templates")
 
 	logs.Init()

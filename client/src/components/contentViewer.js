@@ -22,7 +22,8 @@ export class ContentViewer extends Component {
 
 	render() {
 		console.log("ActiveMonitoringApp in ContentViewer :", this.props.activeMonitoringApp);
-		if (this.props.activeMonitoringApp.length > 0 && this.props.activeMonitoringApp[0].searchResults && this.props.activeMonitoringApp[0].searchResults.length > 0) {
+		if (this.props.activeMonitoringApp.length > 0 && 
+			((this.props.activeMonitoringApp[0].searchResults && this.props.activeMonitoringApp[0].searchResults.length > 0) || this.props.activeMonitoringApp[0].searchInProgress)) {
 			return (
 				<div style={{height:'100vh', overflow:'auto'}}>
                 <Tabs id="content-viewer" activeKey={this.props.activeMonitoringApp[0].contentViewKey} onSelect={key => this.selectView(key)} >

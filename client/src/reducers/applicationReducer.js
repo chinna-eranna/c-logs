@@ -22,7 +22,7 @@ export default function application(state = initialState, action){
             console.log("NewState:  " + JSON.stringify(newState));
             break;
         case types.MONITOR_APP_LOG:
-            const monitoringApp = action.payload;
+            const monitoringApp = JSON.parse(JSON.stringify(action.payload));
             monitoringApp.tail = true;
             monitoringApp.logsCount = 0;
             monitoringApp.displaySettings = false;
@@ -69,13 +69,28 @@ export default function application(state = initialState, action){
         case types.SET_SEARCH_TEXT:
             newState = updateArrayProperty(newState, 'monitoringApps', 'Id', action.payload.id, 'searchText', action.payload.searchText);
             break;
+        case types.SEARCH_RESULTS_INPROGRESS:
+            newState = updateArrayProperty(newState,  'monitoringApps', 'Id', action.payload.id, 'contentViewKey','searchResults');
+            newState = updateArrayProperty(newState,  'monitoringApps', 'Id', action.payload.id, 'searchInProgress',true);
+            break;
         case types.SEARCH_RESULTS:
             newState = updateArrayProperty(newState,  'monitoringApps', 'Id', action.payload.id, 'searchResults', action.payload.searchResults);
+            newState = updateArrayProperty(newState,  'monitoringApps', 'Id', action.payload.id, 'searchInProgress', false);
             newState = updateArrayProperty(newState,  'monitoringApps', 'Id', action.payload.id, 'contentViewKey','searchResults');
             break;
         case types.SELECT_CONTENT_VIEW:
             newState = updateArrayProperty(newState,  'monitoringApps', 'Id', action.payload.id, 'contentViewKey',action.payload.contentViewKey);
             break;
+        case types.STOP_MONITORING:
+                const appIndex = newState.monitoringApps.findIndex((monApp) => {
+                    return monApp.Id === action.payload.id;
+                })
+                newState = dotProp.delete(newState, `monitoringApps.${appIndex}`);
+                newState = dotProp.delete(newState, 'logs_' + action.payload.id);
+                if(newState.activeAppId === action.payload.id){
+                    newState = dotProp.delete(newState, 'activeAppId');
+                }
+                break;
         default :
         console.log('default: ' + JSON.stringify(action));
     }

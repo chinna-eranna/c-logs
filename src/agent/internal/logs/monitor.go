@@ -19,9 +19,9 @@ type MonitoringLogFile struct{
 	FilePattern string
 	FileName string
 	Lines chan string
-	Offset int
+	Offset int64
 
-	CompressedFile string
+	CompressedFile bool
 
 	LinesConsumed chan int64
 	LinesProduced int64
@@ -61,21 +61,27 @@ func MonitorLogPath(logDirectory utils.LogDirectory, startMonitoringReq StartMon
 	monFilePattern := logDirectory.LogFilePattern
 	var err error
 	var startFile string
-	if startMonitoringReq.StartFrom === 'New Logs' {
+	var offset int64
+	if startMonitoringReq.StartFrom == "New Logs" {
 		startFile,err = utils.FindLatestFile(dir, monFilePattern)
 		if(err != nil){
 			return MonitoringLogFile{}, err
 		}
-	}else if (startMonitoringReq.StartFrom === 'All Logs'){
-		//find oldest file
+		offset =  utils.FileSize(dir, startFile)
+	}else if (startMonitoringReq.StartFrom == "All Logs"){
+		startFile,err = utils.FindOldestFile(dir, monFilePattern)
+		if(err != nil){
+			return MonitoringLogFile{}, err
+		}
 	}else{
 		startFile = startMonitoringReq.StartFrom
 	}
-
+	
+	
 	quitCh := make(chan string, 1)
 	linesReadCh := make(chan string, 1000)
 	linesConsumeTracker := make(chan int64, 1000)
-	monitoringLogFile := MonitoringLogFile{dir,monFilePattern, startFile, linesReadCh, 0, "", linesConsumeTracker, 0, quitCh, false, 0, true, false}
+	monitoringLogFile := MonitoringLogFile{dir,monFilePattern, startFile, linesReadCh, offset, false, linesConsumeTracker, 0, quitCh, false, 0, true, false}
 	Files[logDirectory.Id] = &monitoringLogFile
 	
 	go monitoringLogFile.readLogFile()
@@ -101,30 +107,38 @@ func (monitoringLogFile *MonitoringLogFile) ResetMonitoring(resetReq ResetReques
 }
 
 func (monitoringLogFile *MonitoringLogFile) readLogFile(){
-	for monitoringLogFile.start  || monitoringLogFile.nextFile || monitoringLogFile.reset {
-
-		if monitoringLogFile.start {
-			monitoringLogFile.start = false
-		}
+	for monitoringLogFile.start  || monitoringLogFile.nextFile || monitoringLogFile.reset || monitoringLogFile.CompressedFile {
 		
 		if(monitoringLogFile.nextFile){
-			nextFile, err := utils.FindNextFile(monitoringLogFile.Directory,
-				monitoringLogFile.FileName,monitoringLogFile.FilePattern)
-			if err != nil {
-				log.Info("Got error while fetching next file ", err)
-				monitoringLogFile.quitCh <- "quit"
-				return
-			}
-			if nextFile != ""{
-				monitoringLogFile.nextFile  = false
-				monitoringLogFile.FileName = nextFile
-			}else{
-				time.Sleep(2000 * time.Millisecond)
-				continue
-			}
+			monitoringLogFile.nextFile  = false
 		}
 
 		absFilepath := filepath.Join(monitoringLogFile.Directory, monitoringLogFile.FileName)
+		if strings.HasSuffix(monitoringLogFile.FileName, ".gz"){
+			uncompressedFilePath := filepath.Join(utils.GetAppHomeDir(), strings.TrimSuffix(monitoringLogFile.FileName, ".gz"))
+			utils.GunzipFile(filepath.Join(monitoringLogFile.Directory, monitoringLogFile.FileName), uncompressedFilePath)
+			absFilepath = uncompressedFilePath
+		}
+
+		if monitoringLogFile.CompressedFile {
+			monitoringLogFile.CompressedFile = false
+		}else  if monitoringLogFile.start {
+			monitoringLogFile.start = false
+			//Dont reset offset to 0 while starting for the first time, as either it is default 0 or Set to start with new logs.
+		}else{
+			monitoringLogFile.Offset = 0;
+		}
+	
+		/*
+		if monitoringLogFile.CompressedFile {
+			absFilepath = monitoringLogFile.CompressedFile
+			monitoringLogFile.FileName = monitoringLogFile.CompressedFile
+			monitoringLogFile.CompressedFile = ""
+		}else{
+			absFilepath = filepath.Join(monitoringLogFile.Directory, monitoringLogFile.FileName)
+			monitoringLogFile.Offset = 0;
+		}*/
+
 		log.Info("Start reading and buffering log file ", absFilepath)
 		
 		file,err := os.Open(absFilepath)
@@ -139,6 +153,7 @@ func (monitoringLogFile *MonitoringLogFile) readLogFile(){
 		if monitoringLogFile.reset{
 			log.Info("Reset the monitoring to file ", monitoringLogFile.FileName)
 			monitoringLogFile.reset = false;
+			monitoringLogFile.Offset = 0;
 			//skip the lines
 
 			skippedLines := 0
@@ -151,33 +166,64 @@ func (monitoringLogFile *MonitoringLogFile) readLogFile(){
 			}
 			log.Info("Number of lines skipped for reset ", skippedLines)
 		}
-		compressedFileBeingRead := false
+		
+		if monitoringLogFile.Offset > 0 {
+			//TODO Discard in  a loop, if offset (of type  int64) has value > max int
+			discarded,err  := reader.Discard(int(monitoringLogFile.Offset))
+			if err != nil{
+				log.Error("Could not seek into the file  ", absFilepath, " Bytes Discarded: ", discarded)
+				monitoringLogFile.quitCh <- "quit"
+				return 
+			}
+		}
 		for{
 			if monitoringLogFile.reset {
 				log.Info("Reset is set, hence resetting the monitoring")
 				break
 			}
-			if !compressedFileBeingRead && len(monitoringLogFile.CompressedFile) > 0 {
-				file, err := monitoringLogFile.switchToCompressedFile()
-				if err != nil{
-					return
-				}
-				compressedFileBeingRead = true
-				defer file.Close()
-			}
-
+	
 			bytes,err := reader.ReadBytes('\n');
-			monitoringLogFile.addLine(bytes)
 			if err != nil{
 				log.Error("Error while reading the monitoring file: ", absFilepath, err);
 				if err == io.EOF{
-					time.Sleep(2000 * time.Millisecond)
 					monitoringLogFile.nextFile = true
+				}else {
+					waitTime := 0
+					for !monitoringLogFile.CompressedFile && waitTime < 10000{
+						time.Sleep(1000 * time.Millisecond);
+					}
+					if !monitoringLogFile.CompressedFile {
+						log.Error("Timeout waiting for compressed file, Start reading the next available file")
+						monitoringLogFile.nextFile = true
+					}else{
+						log.Info("Found Compressed file: ",monitoringLogFile.CompressedFile)
+						break
+					}
 				}
-				break
 				
+				if monitoringLogFile.nextFile {
+					nextFile, err := utils.FindNextFile(monitoringLogFile.Directory,
+						monitoringLogFile.FileName,monitoringLogFile.CompressedFile,monitoringLogFile.FilePattern)
+					if err != nil {
+						log.Error("Got error while fetching next file ", err)
+						time.Sleep(2000 * time.Millisecond)
+						continue
+					}
+					if nextFile != ""{
+						monitoringLogFile.CompressedFile = false
+						monitoringLogFile.FileName = nextFile
+						monitoringLogFile.nextFile = true
+						break
+					}else{
+						time.Sleep(2000 * time.Millisecond)
+						continue
+					}
+				}
+			}else{
+				monitoringLogFile.addLine(bytes)
+				monitoringLogFile.waitForConsuming()
 			}
-			monitoringLogFile.waitForConsuming()
+			
 		}
 	}
 }
@@ -204,7 +250,7 @@ func (monitoringLogFile *MonitoringLogFile) GetLogs() []string{
 func (monitoringLogFile *MonitoringLogFile) addLine(bytes []byte){
 	if len(bytes) > 0{
 		monitoringLogFile.Lines <- string(bytes)
-		monitoringLogFile.Offset += len(bytes)
+		monitoringLogFile.Offset += int64(len(bytes))
 		monitoringLogFile.LinesProduced += 1
 	}
 }
@@ -218,7 +264,7 @@ func (monitoringLogFile *MonitoringLogFile) waitForConsuming(){
 		log.Info("Lines available After consuming ", monitoringLogFile.LinesProduced)
 	}
 }
-
+/*
 func (monitoringLogFile *MonitoringLogFile) switchToCompressedFile()(*os.File, error){
 	log.Info("Opening Compressed file now")
 	file,err := os.Open(monitoringLogFile.CompressedFile)
@@ -239,6 +285,7 @@ func (monitoringLogFile *MonitoringLogFile) switchToCompressedFile()(*os.File, e
 	log.Info("Succeessfully discarded bytes ", discarded, " from ", monitoringLogFile.CompressedFile)
 	return file, nil
 }
+*/
 
 func (monitoringLogFile *MonitoringLogFile) monitorDir(){
 	dirMonitorCh := make(chan notify.EventInfo, 10)
@@ -271,13 +318,14 @@ func (monitoringLogFile *MonitoringLogFile) handleDirChangeNotification(ei notif
 		log.Info("Directory Change Notification - Created file : ", ei.Path())
 		dirName,fileName := filepath.Split(ei.Path())
 		if strings.HasSuffix(fileName, ".gz") {
-			if  len(monitoringLogFile.CompressedFile) > 0 {
+			if  monitoringLogFile.CompressedFile {
 				return;
 			}
 			log.Info("Got compressed file ", filepath.Join(dirName, fileName))
-			uncompressedFilePath := filepath.Join(utils.GetAppHomeDir(), strings.TrimSuffix(fileName, ".gz"))
-			utils.GunzipFile(ei.Path(), uncompressedFilePath)
-			monitoringLogFile.CompressedFile = uncompressedFilePath
+			//uncompressedFilePath := filepath.Join(utils.GetAppHomeDir(), strings.TrimSuffix(fileName, ".gz"))
+			//utils.GunzipFile(ei.Path(), uncompressedFilePath)
+			monitoringLogFile.CompressedFile = true
+			monitoringLogFile.FileName = fileName
 		}
 		
 	case notify.Remove:

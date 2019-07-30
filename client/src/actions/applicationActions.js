@@ -48,6 +48,7 @@ export function monitorAppLog(app, startLogFile){
 export function search(app) {
     return dispatch => {
         console.log("Starting search for app ", app.Name, " with search text ", app.searchText);
+        dispatch({type: types.SEARCH_RESULTS_INPROGRESS, payload: {id: app.Id}});
         searchInApp(app.Id, app.searchText).then(function(response){
             dispatch({type: types.SEARCH_RESULTS, payload: {id: app.Id, searchResults: response.data}});
             console.log("Successfully retrieved the search results for app " + response.data);
@@ -70,6 +71,7 @@ export function reset(app, file, lineNumber){
             console.log("Successfully reset monitoring");
             dispatch({type: types.CLEAR_LOGS, payload: {id: app.Id}})
             dispatch({type: types.START_TAIL, payload: {id: app.Id}})
+            dispatch({type: types.SET_SCROLL_POSITION, payload: {'top':0}});
             dispatch({type: types.SELECT_CONTENT_VIEW, payload:{'id': app.Id, 'contentViewKey':'logs'}})
         }, function(err){
             console.log("Error while reset monitoring - ", err);

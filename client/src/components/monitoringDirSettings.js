@@ -24,12 +24,13 @@ export class MonitoringDirSettings extends Component {
         super(props);
         this.selectLogDir = this.selectLogDir.bind(this);
         this.handleClearLogs = this.handleClearLogs.bind(this);
+        this.handleRemove = this.handleRemove.bind(this);
         this.toggleDisplaySettings = this.toggleDisplaySettings.bind(this);
         this.handleSwitch = this.handleSwitch.bind(this);
         this.search = this.search.bind(this);
         this.continueTail = this.continueTail.bind(this);
         this.searchTextChangeHandler = this.searchTextChangeHandler.bind(this);
-        this.state = {};
+        this.state = {tail: false};
    }
 
     selectLogDir(){
@@ -40,6 +41,9 @@ export class MonitoringDirSettings extends Component {
         this.props.clearLogs(this.props.app.Id);
     }
 
+    handleRemove(){
+        this.props.stopMonitoring(this.props.app.Id);
+    }
     handleSwitch(state) {
         console.log('Tail new state:', state);
         if(state){
@@ -67,6 +71,18 @@ export class MonitoringDirSettings extends Component {
         }
     }
 
+    componentDidUnMount(){
+
+    }
+
+    componentDidUpdate(){
+        if(this.props.app.tail && !this.state.tail){
+            console.log("componentDidUpdate: Tail is not running but set, starting tail");
+            this.setState({tailStartLogsLinesCount: this.props.logsCount});
+            this.continueTail(this.props.app);
+        }
+    }
+
     search(){
         if(this.props.app.searchText  && this.props.app.searchText.length > 0){
             console.log("Search is being trigger for app ", this.props.app)
@@ -81,38 +97,47 @@ export class MonitoringDirSettings extends Component {
     }
       
     continueTail(app){
+        this.setState({tail: true});
         console.log("Tailing app: " + JSON.stringify(app) + " State: " + JSON.stringify(this.state));
         console.log("LogsCount :", this.props.logsCount , " tailStartLogsLinesCount : ", this.state.tailStartLogsLinesCount);
         console.log("this.state.tailStartLogsLinesCount :", this.state.tailStartLogsLinesCount , " Difference : ", (this.props.logsCount - this.state.tailStartLogsLinesCount));
-        if(this.state.tailStartLogsLinesCount != undefined && ((this.props.logsCount - this.state.tailStartLogsLinesCount) >= 300)){
+        if(this.state.tailStartLogsLinesCount != undefined && ((this.props.logsCount - this.state.tailStartLogsLinesCount) >= 1000)){
             console.log("Stopping the trail");
             this.props.stopTail(app.Id);
+            this.setState({tail: false});
             return;
         }else{
             this.props.getMoreLogs(app);
-            setTimeout(() => {this.continueTail(app)}, 2000);
+            setTimeout(() => {
+                if(this.props.app.tail){
+                    this.continueTail(app);
+                }
+            }, 1000);
         }
     }
 
 
 	render() {
-        let backgroundColor = 'white';
+        let backgroundColor = ''
+        let textColor = 'white'
+        
         let settingsContent = '';
         if(this.props.app.Id === this.props.activeAppId){
-            backgroundColor = 'lightblue'
+            backgroundColor = 'white';
+            textColor = 'green'
         }
         
         const searchText = this.props.app.searchText  ? this.props.app.searchText :  '';
         if(this.props.app.displaySettings){
             settingsContent = ( 
-            <div style={{border:'1px dashed black', padding:'2px',borderRadius:'0.0rem 0.0rem .2rem.2rem', marginBottom:'2px'}}>
-                <div style={{display:'flex'}}>
+            <div style={{border:'1px dashed black', padding:'2px',borderRadius:'0.0rem 0.0rem .2rem.2rem', marginBottom:'2px', borderColor:'yellow'}}>
+                <div style={{display:'flex', marginTop:'3px'}}>
                     <div style={{flexGrow:'1'}}>
                         <input type="text" name="search" style={{width: '100%'}} value={searchText} onChange={(e) => this.searchTextChangeHandler(e)}/>
                     </div> 
                     <div style={{cursor: 'pointer', padding: '2px 5px 0px 5px' , fontSize: '20px'}} onClick={(e) => this.search()}>🔍</div>
                 </div>
-                <div style={{display:'flex'}}>
+                <div style={{display:'flex', marginTop:'3px'}}>
                     <div style={{flexGrow:'1', textAlign:'left'}}>
                         <div style={{display:'flex'}}>
                             <div style={{paddingRight: '0.5rem'}}>Tail :</div>
@@ -133,21 +158,32 @@ export class MonitoringDirSettings extends Component {
                             />
                         </div>
                     </div>
+                   
+                </div>
+                <div style={{display:'flex', marginTop:'3px', marginRight: '10px'}}>
                     <div>
-                        <Button variant="danger" size="sm" onClick={this.handleClearLogs} style={{marginRight:'10px'}}>Clear</Button>
+                        <Button variant="danger" size="sm" onClick={this.handleClearLogs} style={{marginRight:'10px'}}>Clear Logs</Button>
+                    </div>
+                    <div>
+                        <Button variant="danger" size="sm" onClick={this.handleRemove} style={{marginRight:'10px'}}>Remove</Button>
                     </div>
                 </div>
             </div>
             )
         }
 
+        let tailEmoji = ''
+        if(this.props.app.tail){
+            tailEmoji = <div style={{padding:'2px', color:'darkblack'}}>{'🏃'}</div>
+        }
 
 		return (
             <div>
             <div>
                 <div >
-                    <div style={{display:'flex', border:'2px solid black', marginTop:'10px',  borderRadius:'.2rem', padding:'2px', cursor:'pointer', background:backgroundColor}}>
-                        <div style={{flexGrow:'1'}} onClick={(e) => this.selectLogDir()}>{this.props.app.Name}</div>
+                    <div style={{display:'flex', border:'2px solid black', marginTop:'10px',  borderRadius:'.2rem', padding:'2px', cursor:'pointer', background:backgroundColor, color: textColor}}>
+                        <div style={{flexGrow:'1', textAlign:'left'}} onClick={(e) => this.selectLogDir()}>{this.props.app.Name}</div>
+                        {tailEmoji}
                         <div style={{padding:'2px', color:'darkblack'}} onClick={(e) => this.toggleDisplaySettings()}>{'🛠'}</div>
                     </div>
                 </div>
@@ -177,6 +213,7 @@ const mapDispatchToProps = dispatch => {
         stopTail: (appId) => { dispatch({type: types.STOP_TAIL, payload: {'id':appId}});},
         getMoreLogs: (app)  => {dispatch(actions.getMoreLogs(app));},
         search:  (app) => {dispatch(actions.search(app));},
+        stopMonitoring: (appId) => { dispatch({type: types.STOP_MONITORING, payload: {'id':appId}});}
 	};
 };
 

@@ -7,6 +7,7 @@ import InfiniteScroll from 'react-infinite-scroller';
 import { getLogMessages } from '../services/appLogServices';
 import *  as actions from '../actions/applicationActions';
 import * as types from '../actions/actionTypes';
+import styles from '../css/app.css';
 
 export class LogsViewer extends Component {
 
@@ -21,12 +22,12 @@ export class LogsViewer extends Component {
 
 	loadMoreLogs(){
 		this.setState({ initialLoad: false });
-		if(!this.props.activeMonitoringApp[0].tail){
+		//if(!this.props.activeMonitoringApp[0].tail){
 			console.log("Load more logs invoked");
 			this.props.getMoreLogs(this.props.activeMonitoringApp[0]);
-		}else{
-			console.log("Tailing is ON, hence not loading");
-		}
+		//}else{
+		//	console.log("Tailing is ON, hence not loading");
+		//}
 	}
 
 	componentDidMount(){
@@ -80,7 +81,8 @@ export class LogsViewer extends Component {
 			console.log("Logs length:" + this.props.logs.length);
 			var logsHtml = [];
 			for(var i = 0; i < this.props.logs.length;  i++){
-				logsHtml.push(<div style={{wordWrap: 'break-word', backgroundColor: '#dee2e6', margin:'1px'}}>  {this.props.logs[i]} </div>);
+			//	logsHtml.push(<div style={{wordWrap: 'break-word', backgroundColor: '#6d6d6d', paddingTop:'1px', fontFamily: 'Verdana', color: 'white'}//}>  {this.props.logs[i]} </div>);
+				logsHtml.push(<div className={styles.logLine}>  {this.props.logs[i]} </div>);
 			}
 			logsHtml.push(this.props.activeMonitoringApp[0].loading ? '' : <div style={{cursor:'pointer'}} onClick={this.loadMoreLogs}>Click to load more..🥃</div>)
 			return logsHtml;
