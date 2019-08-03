@@ -7,6 +7,7 @@ import  (
 
 type SearchQuery struct{
 	SearchString string
+	Type string
 }
 
 type SearchResult struct{

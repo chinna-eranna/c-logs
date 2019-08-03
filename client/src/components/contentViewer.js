@@ -25,10 +25,10 @@ export class ContentViewer extends Component {
 		if (this.props.activeMonitoringApp.length > 0 && 
 			((this.props.activeMonitoringApp[0].searchResults && this.props.activeMonitoringApp[0].searchResults.length > 0) || this.props.activeMonitoringApp[0].searchInProgress)) {
 			return (
-				<div style={{height:'100vh', overflow:'auto'}}>
+				<div style={{height:'100vh', overflow:'auto', border:'2px solid black',}}>
                 <Tabs id="content-viewer" activeKey={this.props.activeMonitoringApp[0].contentViewKey} onSelect={key => this.selectView(key)} >
                     <Tab eventKey="logs" title="Logs">
-                        <LogsViewer logs={this.props.logs} activeMonitoringApp={this.props.activeMonitoringApp}/>);
+						<LogsViewer logs={this.props.logs} activeMonitoringApp={this.props.activeMonitoringApp}/>
                     </Tab>
                     <Tab eventKey="searchResults" title="Search Results">
                         <SearchResults activeMonitoringApp={this.props.activeMonitoringApp[0]}/>
@@ -37,7 +37,7 @@ export class ContentViewer extends Component {
 				</div>
 			);
 		} else{
-			return ( <LogsViewer logs={this.props.logs} activeMonitoringApp={this.props.activeMonitoringApp}/>);
+			return ( <div style={{height:'100vh',overflow:'auto', border:'2px solid black'}}><LogsViewer logs={this.props.logs} activeMonitoringApp={this.props.activeMonitoringApp}/></div>);
 		}
 	}
 }

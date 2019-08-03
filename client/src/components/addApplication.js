@@ -38,7 +38,8 @@ export class AddApplication extends Component {
 		this.addApplication = this.addApplication.bind(this);
 		this.getStartFromContent = this.getStartFromContent.bind(this);
 		this.readFullFileContent = this.readFullFileContent.bind(this);
-		this.state = { selectApplication: false, selectedApp: '-None-', startLogFile:this.newLogs };
+		this.handleReadFullFileContent  = this.handleReadFullFileContent.bind(this);
+		this.state = { selectApplication: false, selectedApp: '-None-', startLogFile:this.newLogs, readFullFileContent:false };
 	}
 	handleAddAppLog() {
 		if (this.state.selectedApp === '-None-') {
@@ -48,13 +49,19 @@ export class AddApplication extends Component {
 			return app.Name == this.state.selectedApp
 		});
 		console.log("Application To Be monitored:" + JSON.stringify(appToBeMonitored));
-		this.props.monitorAppLog(appToBeMonitored[0], this.state.startLogFile);
+		this.props.monitorAppLog(appToBeMonitored[0], this.state.startLogFile, this.state.readFullFileContent);
 		this.setState({ selectApplication: false, selectedApp: '-None-', startLogFile:'New Logs'});
 	}
 
 	handleCancelAppLog() {
 		this.setState({ selectApplication: false });
 	}
+
+	handleReadFullFileContent(){
+		this.setState({readFullFileContent:!this.state.readFullFileContent});
+		console.log("State after toggling read full file content: " + this.state);
+	}
+
 	addApplication() {
 		this.setState({ selectApplication: true });
 	}
@@ -153,7 +160,7 @@ export class AddApplication extends Component {
 
 	readFullFileContent(){
 		if(this.state.startLogFile &&  this.state.startLogFile !== this.newLogs && this.state.startLogFile !== this.allLogs) {
-			return  <Form.Check  style={{ color: 'black' }} type="checkbox" label="Read selected files full content on start" />
+			return  <Form.Check  style={{ color: 'black' }} onClick={this.handleReadFullFileContent} type="checkbox" label="Read selected files full content on start" />
 		}
 		else{
 			return '';
@@ -208,7 +215,7 @@ const mapStateToProps = state => {
 
 const mapDispatchToProps = dispatch => {
 	return {
-		monitorAppLog: (app, startLogFile) => { dispatch(actions.monitorAppLog(app, startLogFile)); },
+		monitorAppLog: (app, startLogFile, readFullFileContent) => { dispatch(actions.monitorAppLog(app, startLogFile, readFullFileContent)); },
 		getFiles: (directory, pattern) => {dispatch(actions.fetchFiles(directory, pattern)); },
 		clearFilesList: () => {dispatch({type: types.FILES_LIST, payload:{filesList:[]}})}
 	};

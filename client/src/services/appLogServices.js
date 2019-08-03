@@ -39,7 +39,7 @@ function startMonitoring(appId, startFrom){
 
 var logMsgRequests = {};
 
-function getLogMessages(appId){
+function getLogMessages(appId, fullContent){
     return new Promise((resolve, reject) => { 
             if(logMsgRequests[appId]){
                 console.log("Throttled getLogMessages for App :" + appId);
@@ -48,7 +48,7 @@ function getLogMessages(appId){
             }
             //add content-type header
             logMsgRequests[appId] = true;
-            axios.get(`/v1/logDirectories/${appId}/logs`).then(function(response){
+            axios.get(`/v1/logDirectories/${appId}/logs?fullContent=${fullContent}`).then(function(response){
                 console.log("Got logs: " + JSON.stringify(response));
                 resolve(response);
                 logMsgRequests[appId]  = false;
@@ -60,9 +60,9 @@ function getLogMessages(appId){
     });
 }
 
-function searchInApp(appId, searchString){
+function searchInApp(appId, searchString, searchStrType){
     return new Promise((resolve, reject)=> {
-        axios.post(`/v1/logDirectories/${appId}/search`, {SearchString: searchString}).then(function(response){
+        axios.post(`/v1/logDirectories/${appId}/search`, {SearchString: searchString, Type:searchStrType}).then(function(response){
             resolve(response);
         }).catch(function(err){
             reject(err);

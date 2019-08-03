@@ -161,6 +161,7 @@ func (monitoringLogFile *MonitoringLogFile) readLogFile(){
 				_,err := reader.ReadBytes('\n');
 				if err != nil{
 					log.Error("Error while skipping the lines monitoring file reset: ", absFilepath, err);
+					break
 				}
 				skippedLines++
 			}

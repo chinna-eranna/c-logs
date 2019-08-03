@@ -239,6 +239,7 @@ func GetFileContents(dir string, fileName string)(chan string, error){
 			}
 			bytesRead = bytesRead +  int64(len(bytes));
 			linesReadCh <- string(bytes)
+			log.Info("Line: " + string(bytes))
 		}
 		log.Info("Total bytes read ", bytesRead)
 		close(linesReadCh)
@@ -286,7 +287,7 @@ func GetMatchingFiles(dir string, filePattern string, fullpath bool)([]GetFilesR
 	return matchingFiles, nil
 }
 
-func SearchLogs(directory string, filePattern string, searchString string)([]SearchResult){
+func SearchLogs(directory string, filePattern string, searchQuery SearchQuery)([]SearchResult, error){
 	matchingFiles, _ := GetMatchingFiles(directory, filePattern, true)
 	
 	var filesToSearch []string
@@ -294,7 +295,13 @@ func SearchLogs(directory string, filePattern string, searchString string)([]Sea
 		filesToSearch = append(filesToSearch, eachFile.Name)
 	}
 
-	args := []string{"-Fn", searchString,}
+	var args []string
+	if(searchQuery.Type == ".*"){
+		args = []string{"-n", "--max-count=50", searchQuery.SearchString}
+	}else{
+		args = []string{"-Fn", "--max-count=50", searchQuery.SearchString}
+	}
+	
 	args = append(args, filesToSearch...)
 	cmd := exec.Command("zgrep", args...)
 	var out bytes.Buffer
@@ -302,9 +309,16 @@ func SearchLogs(directory string, filePattern string, searchString string)([]Sea
 	var stderr bytes.Buffer
 	cmd.Stderr = &stderr
 	err := cmd.Run()
-	if err != nil {
+	output := out.String();
+	errOutput := stderr.String()
+
+	log.Info("SearchLogs Output: " + output );
+	log.Info("SearchLogs errOutput: " + errOutput );
+	log.Info("SearchLogs err: " + fmt.Sprint(err) );
+
+	if len(errOutput) > 0 && err != nil {
 		log.Error("SearchLogs : " + fmt.Sprint(err) + ": " + stderr.String())
+		return nil, errors.New(fmt.Sprint(err) + ": " + stderr.String())
 	}
-	fmt.Printf("Output Returned: %q\n", out.String())
-	return ParseResults(out.String())
+	return ParseResults(output), nil
 }

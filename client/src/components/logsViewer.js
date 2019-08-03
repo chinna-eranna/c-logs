@@ -17,16 +17,15 @@ export class LogsViewer extends Component {
 		this.getLogsToDisplay = this.getLogsToDisplay.bind(this);
 		this.paneDidMount = this.paneDidMount.bind(this);
 		this.onScroll = this.onScroll.bind(this);
-		this.state = {items: [<div>1</div>]}
+		this.state = {items: [<div>1</div>], initialLoad:false}
 	}
 
 	loadMoreLogs(){
-		this.setState({ initialLoad: false });
-		//if(!this.props.activeMonitoringApp[0].tail){
+		//if(this.props.activeMonitoringApp[0].tail){
 			console.log("Load more logs invoked");
 			this.props.getMoreLogs(this.props.activeMonitoringApp[0]);
 		//}else{
-		//	console.log("Tailing is ON, hence not loading");
+		//	console.log("Tailing is OFF, hence not loading");
 		//}
 	}
 
@@ -58,7 +57,7 @@ export class LogsViewer extends Component {
 		console.log("Active Monitoring App in LogsViewer rendeer : ", this.props.activeMonitoringApp);
 		if (this.props.activeMonitoringApp && this.props.activeMonitoringApp.length > 0) {
 			return (
-					<div ref="elem" onScroll={ this.onScroll } style={{border:'2px solid black', padding:'2px', height:'100vh', overflow:'auto'}}>
+				<div ref="elem" onScroll={ this.onScroll } style={{padding:'2px'}}>
 				<InfiniteScroll
 					initialLoad={this.state.initialLoad}
 					pageStart={0}
@@ -71,7 +70,7 @@ export class LogsViewer extends Component {
 			</div>
 			)
 		} else{
-			return (<Container> Please select an application to view logs </Container>);
+			return (<div style={{padding:'2px'}}><Container> Please select an application to view logs </Container></div>);
 		}
 	}
 

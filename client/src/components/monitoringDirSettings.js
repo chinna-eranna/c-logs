@@ -2,6 +2,7 @@ import { Component } from 'react';
 import React from "react";
 import { connect } from 'react-redux';
 import Button from 'react-bootstrap/Button';
+import Form from 'react-bootstrap/Form'
 import Container from 'react-bootstrap/Container'
 import Row from 'react-bootstrap/Row'
 import Col from 'react-bootstrap/Col'
@@ -30,7 +31,8 @@ export class MonitoringDirSettings extends Component {
         this.search = this.search.bind(this);
         this.continueTail = this.continueTail.bind(this);
         this.searchTextChangeHandler = this.searchTextChangeHandler.bind(this);
-        this.state = {tail: false};
+        this.state = {tail: false, searchStrType:'TXT'};
+        this.togglesearchStrType = this.togglesearchStrType.bind(this);
    }
 
     selectLogDir(){
@@ -53,7 +55,14 @@ export class MonitoringDirSettings extends Component {
         }else{
             this.props.stopTail(this.props.app.Id);
         }
-      }
+    }
+    togglesearchStrType(){
+        if(this.state.searchStrType === '.*'){
+            this.setState({searchStrType:'TXT'});
+        }else{
+            this.setState({searchStrType:'.*'});
+        }
+    }
 
     toggleDisplaySettings(){
         console.log("Toggle display settings invoked DisplaySettings ");
@@ -86,7 +95,7 @@ export class MonitoringDirSettings extends Component {
     search(){
         if(this.props.app.searchText  && this.props.app.searchText.length > 0){
             console.log("Search is being trigger for app ", this.props.app)
-            this.props.search(this.props.app);
+            this.props.search(this.props.app, this.state.searchStrType);
         }else{
             console.log("Search is not trigger for app ", this.props.app, "as searchText is null")
         }
@@ -126,17 +135,12 @@ export class MonitoringDirSettings extends Component {
             backgroundColor = 'white';
             textColor = 'green'
         }
-        
+      
         const searchText = this.props.app.searchText  ? this.props.app.searchText :  '';
         if(this.props.app.displaySettings){
             settingsContent = ( 
             <div style={{border:'1px dashed black', padding:'2px',borderRadius:'0.0rem 0.0rem .2rem.2rem', marginBottom:'2px', borderColor:'yellow'}}>
-                <div style={{display:'flex', marginTop:'3px'}}>
-                    <div style={{flexGrow:'1'}}>
-                        <input type="text" name="search" style={{width: '100%'}} value={searchText} onChange={(e) => this.searchTextChangeHandler(e)}/>
-                    </div> 
-                    <div style={{cursor: 'pointer', padding: '2px 5px 0px 5px' , fontSize: '20px'}} onClick={(e) => this.search()}>🔍</div>
-                </div>
+                
                 <div style={{display:'flex', marginTop:'3px'}}>
                     <div style={{flexGrow:'1', textAlign:'left'}}>
                         <div style={{display:'flex'}}>
@@ -158,9 +162,22 @@ export class MonitoringDirSettings extends Component {
                             />
                         </div>
                     </div>
-                   
                 </div>
-                <div style={{display:'flex', marginTop:'3px', marginRight: '10px'}}>
+
+                <div style={{display:'flex', marginTop:'3px'}}>
+                    <div style={{flexGrow:'1'}}>
+                    <InputGroup>
+                        <InputGroup.Prepend>
+                            <Button variant="outline-warning" onClick={() => this.togglesearchStrType()}>{this.state.searchStrType}</Button>
+                        </InputGroup.Prepend>
+                        <FormControl aria-describedby="basic-addon1" value={searchText} onChange={(e) => this.searchTextChangeHandler(e)}/>
+                    </InputGroup>
+                      
+                    </div> 
+                    <div style={{cursor: 'pointer', padding: '2px 5px 0px 5px' , fontSize: '20px'}} onClick={(e) => this.search()}>🔍</div>
+                </div>
+                
+                <div style={{display:'flex', marginTop:'0.5rem', marginRight: '10px'}}>
                     <div>
                         <Button variant="danger" size="sm" onClick={this.handleClearLogs} style={{marginRight:'10px'}}>Clear Logs</Button>
                     </div>
@@ -212,7 +229,7 @@ const mapDispatchToProps = dispatch => {
         startTail: (appId) => { dispatch({type: types.START_TAIL, payload: {'id':appId}});},
         stopTail: (appId) => { dispatch({type: types.STOP_TAIL, payload: {'id':appId}});},
         getMoreLogs: (app)  => {dispatch(actions.getMoreLogs(app));},
-        search:  (app) => {dispatch(actions.search(app));},
+        search:  (app, searchStrType) => {dispatch(actions.search(app, searchStrType));},
         stopMonitoring: (appId) => { dispatch({type: types.STOP_MONITORING, payload: {'id':appId}});}
 	};
 };

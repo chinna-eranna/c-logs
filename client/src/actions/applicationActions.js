@@ -32,28 +32,39 @@ export function fetchApplications(){
 }
 
 
-export function monitorAppLog(app, startLogFile){
+export function monitorAppLog(app, startLogFile, fullContent){
     return dispatch => {
         //TODO a progress bar should be displayed before starting the monitoring
         startMonitoring(app.Id, startLogFile).then(function(response){
-           dispatch({type: types.MONITOR_APP_LOG, payload: app});
-           console.log("Invoking getLogs in success response handler of startMonitoring for app  " + JSON.stringify(app)) ; 
-           getLogs(app, dispatch);
+           dispatch({type: types.MONITOR_APP_LOG, payload: {monitoringApp: app, tail: !fullContent}});
+           if(fullContent){
+               console.log("Getting the full conetent of the file ", startLogFile);
+                getLogMessages(app.Id, true).then((response) => {
+                    const logsLinesCount =  logsResponseHandler(app, dispatch, response);
+                    resetMonitoring(app.Id, startLogFile, logsLinesCount+1).then(function(response){
+                        getLogs(app, dispatch);
+                    });
+                });
+           }else{
+                console.log("Invoking getLogs in success response handler of startMonitoring for app  " + JSON.stringify(app)) ; 
+                getLogs(app, dispatch);
+           }
         }, function(err){
             console.log("Error while starting the monitoring of an app, show error to user");
         })
     }
 }
 
-export function search(app) {
+export function search(app, searchStrType) {
     return dispatch => {
         console.log("Starting search for app ", app.Name, " with search text ", app.searchText);
         dispatch({type: types.SEARCH_RESULTS_INPROGRESS, payload: {id: app.Id}});
-        searchInApp(app.Id, app.searchText).then(function(response){
+        searchInApp(app.Id, app.searchText, searchStrType).then(function(response){
             dispatch({type: types.SEARCH_RESULTS, payload: {id: app.Id, searchResults: response.data}});
             console.log("Successfully retrieved the search results for app " + response.data);
         }, function(err){
             console.log("Error in the search request ", err);
+            dispatch({type: types.SEARCH_RESULTS, payload: {id: app.Id, searchResults: err.response.data}});
         });
     }
 }
@@ -97,7 +108,7 @@ export function fetchFiles(directory, filePattern){
 function getLogs(app, dispatch){
     console.log("getLogs: app: " + JSON.stringify(app));
     dispatch({type: types.FETCH_LOGS_START, payload: {id:app.Id}});
-    getLogMessages(app.Id).then((response) => {logsResponseHandler(app, dispatch, response)});
+    getLogMessages(app.Id, false).then((response) => {logsResponseHandler(app, dispatch, response)});
 }
 
 function logsResponseHandler(app, dispatch, response){

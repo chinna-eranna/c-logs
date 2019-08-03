@@ -22,8 +22,8 @@ export default function application(state = initialState, action){
             console.log("NewState:  " + JSON.stringify(newState));
             break;
         case types.MONITOR_APP_LOG:
-            const monitoringApp = JSON.parse(JSON.stringify(action.payload));
-            monitoringApp.tail = true;
+            const monitoringApp = JSON.parse(JSON.stringify(action.payload.monitoringApp));
+            monitoringApp.tail = action.payload.tail;
             monitoringApp.logsCount = 0;
             monitoringApp.displaySettings = false;
             newState = dotProp.set(state, 'monitoringApps', list => [...list, monitoringApp]);

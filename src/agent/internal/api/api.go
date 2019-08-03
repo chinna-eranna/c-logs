@@ -69,42 +69,33 @@ func getLogs(w http.ResponseWriter, r *http.Request){
 		return
 	}
 
+	var logMessages []string
 	if fullContent {
-		
-		w.Header().Set("Content-Type", "application/json")
 		fileContentCh, err := utils.GetFileContents(monitoringFile.Directory, monitoringFile.FileName)
 		if err != nil {
 			log.Error("Error while reading file contents - ", err)
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 		}else{
-			w.Write([]byte("["))
-			notFirst := false;
 			for {
-				j, more := <-fileContentCh
+				nextLine, more := <-fileContentCh
 				//log.Info("Got content: ", j , " and more: ", more)
 				if more {
-					if notFirst {
-						w.Write([]byte(","))
-					}else {
-						notFirst = true
-					}
-					w.Write([]byte(j))
+					logMessages = append(logMessages, nextLine)
 				} else {
-					w.Write([]byte("]"))
 					break
 				}
 			}
 		}
 
 	}else{
-		logMessages := monitoringFile.GetLogs()
-		logMessagesJson,err := json.MarshalIndent(logMessages, " ", " ")
-		if(err != nil){
-			log.Error("Error while fetching logs - ", err)
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-		}else{
-			w.Write(logMessagesJson)
-		}
+		logMessages = monitoringFile.GetLogs()
+	}
+	logMessagesJson,err := json.MarshalIndent(logMessages, " ", " ")
+	if(err != nil){
+		log.Error("Error while fetching logs - ", err)
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+	}else{
+		w.Write(logMessagesJson)
 	}
 }
 
@@ -216,7 +207,11 @@ func searchDirectory(w http.ResponseWriter, r *http.Request){
 	}
 
 	logDirectory := utils.GetLogDirectory(id)
-	results := utils.SearchLogs(logDirectory.Directory, logDirectory.LogFilePattern, searchQuery.SearchString)
+	results, err := utils.SearchLogs(logDirectory.Directory, logDirectory.LogFilePattern, searchQuery)
+	if(err != nil){
+		log.Error("Error while searching for logs - ", err)
+		http.Error(w, err.Error(), http.StatusBadRequest)
+	}
 	jsonResults, err := json.MarshalIndent(results, " ", " ")
 	if(err != nil){
 		log.Error("Error while parsing results - ", err)
