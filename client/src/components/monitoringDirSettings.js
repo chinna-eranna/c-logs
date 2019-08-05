@@ -48,6 +48,7 @@ export class MonitoringDirSettings extends Component {
     }
     handleSwitch(state) {
         console.log('Tail new state:', state);
+        this.state.tail = state
         if(state){
             this.props.startTail(this.props.app.Id);
             this.setState({tailStartLogsLinesCount: this.props.logsCount});

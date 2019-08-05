@@ -16,7 +16,6 @@ export class LogsViewer extends Component {
 		this.loadMoreLogs = this.loadMoreLogs.bind(this);
 		this.getLogsToDisplay = this.getLogsToDisplay.bind(this);
 		this.paneDidMount = this.paneDidMount.bind(this);
-		this.onScroll = this.onScroll.bind(this);
 		this.state = {items: [<div>1</div>], initialLoad:false}
 	}
 
@@ -40,24 +39,11 @@ export class LogsViewer extends Component {
 		}
 	};
 
-	componentDidUpdate(){
-		console.log("Update life cycle method");
-		if(this.refs.elem){
-			this.refs.elem.scrollTop = this.props.activeMonitoringApp[0].scrollTop;
-		}else{
-			console.log("Ref is not defined yet");
-		}
-	}
-	onScroll(){
-		var node = this.refs.elem;
-		this.props.setScrollPosition(node.scrollTop);
-	}
-
 	render() {
-		console.log("Active Monitoring App in LogsViewer rendeer : ", this.props.activeMonitoringApp);
+		console.log("Active Monitoring App in LogsViewer render : ", this.props.activeMonitoringApp);
 		if (this.props.activeMonitoringApp && this.props.activeMonitoringApp.length > 0) {
 			return (
-				<div ref="elem" onScroll={ this.onScroll } style={{padding:'2px'}}>
+				<div style={{padding:'2px'}}>
 				<InfiniteScroll
 					initialLoad={this.state.initialLoad}
 					pageStart={0}
@@ -105,7 +91,6 @@ const mapStateToProps = state => {
 const mapDispatchToProps = dispatch => {
 	return {
 		getMoreLogs: (app)  => {dispatch(actions.getMoreLogs(app));},
-		setScrollPosition:(topPosition) => { dispatch({type: types.SET_SCROLL_POSITION, payload: {'top':topPosition}});}
 	};
 };
 

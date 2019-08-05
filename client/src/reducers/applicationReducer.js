@@ -62,6 +62,7 @@ export default function application(state = initialState, action){
             break;
         case types.CLEAR_LOGS:
             newState = dotProp.set(newState, 'logs_' + action.payload.id, []);
+            newState = updateArrayProperty(newState,  'monitoringApps', 'Id', action.payload.id, 'logsCount',0);
             break;
         case types.TOGGLE_DISPLAY_SETTINGS:
             newState = updateArrayProperty(newState, 'monitoringApps', 'Id', action.payload.id, 'displaySettings', action.payload.displaySettings);
@@ -77,6 +78,11 @@ export default function application(state = initialState, action){
             newState = updateArrayProperty(newState,  'monitoringApps', 'Id', action.payload.id, 'searchResults', action.payload.searchResults);
             newState = updateArrayProperty(newState,  'monitoringApps', 'Id', action.payload.id, 'searchInProgress', false);
             newState = updateArrayProperty(newState,  'monitoringApps', 'Id', action.payload.id, 'contentViewKey','searchResults');
+           /*
+            if(!action.payload.searchResults || action.payload.searchResults.length == 0){
+                newState = updateArrayProperty(newState,  'monitoringApps', 'Id', action.payload.id, 'searchResults', [{Name: "", Line: "", Text:"No Results"}]);
+            }
+            */
             break;
         case types.SELECT_CONTENT_VIEW:
             newState = updateArrayProperty(newState,  'monitoringApps', 'Id', action.payload.id, 'contentViewKey',action.payload.contentViewKey);

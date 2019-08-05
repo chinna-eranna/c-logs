@@ -29,7 +29,7 @@ export class SearchResults extends Component {
             if(Array.isArray(this.props.activeMonitoringApp.searchResults)) {
                 searchResultContent = this.props.activeMonitoringApp.searchResults.map((result) => {
                     if(result.Name && result.Line &&  result.Text) {
-                        return (<div><span style={{cursor: 'pointer', paddingRight:'3px', background:'gray'}} onClick={() => this.showLogs(this.getName(result.Name), result.Line)}>[{this.getName(result.Name)}:{result.Line}]</span> {result.Text}</div>)
+                        return (<div><span style={{cursor: 'pointer', paddingRight:'3px', background:'#b5a061'}} onClick={() => this.showLogs(this.getName(result.Name), result.Line)}>[{this.getName(result.Name)}:{result.Line}]</span> {result.Text}</div>)
                     }else{
                         return (<div>{result}</div>)
                     }

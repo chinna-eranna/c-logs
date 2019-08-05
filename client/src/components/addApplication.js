@@ -122,13 +122,7 @@ export class AddApplication extends Component {
 					</InputGroup.Prepend>
 					{selectAppContent}
 				</InputGroup>
-				
-				<InputGroup size="sm" className="mb-3">
-					<InputGroup.Prepend>
-						<InputGroup.Text id="basic-addon1">Start From</InputGroup.Text>
-					</InputGroup.Prepend>
-					{startFromContent}
-				</InputGroup>
+				{startFromContent}
 				{readFullFileContent}
 			</div>
 		);
@@ -149,12 +143,19 @@ export class AddApplication extends Component {
 			startLogContent.push(<Dropdown.Item size="sm" eventKey={file.Name} key={file.Name}>{file.Name + ' (' + lastModifiedTime+')'}</Dropdown.Item>)
 		}
 
-		let startFromContent = (<DropdownButton size="sm" as={InputGroup.Prepend} variant="outline-secondary"
+		let startFromContent = (
+			<InputGroup size="sm" className="mb-3">
+			<InputGroup.Prepend>
+				<InputGroup.Text id="basic-addon1">Start From</InputGroup.Text>
+			</InputGroup.Prepend>
+			<DropdownButton size="sm" as={InputGroup.Prepend} variant="outline-secondary"
 			title={this.state.startLogFile} id="input-group-dropdown-1" onSelect={this.selectLog} >
 			<div style={{maxHeight:'10em', overflowY:  'scroll'}}>
 			{startLogContent}
 			</div>
-		</DropdownButton>);
+		</DropdownButton>
+		</InputGroup>);
+		
 		return startFromContent;
 	}
 
