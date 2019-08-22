@@ -288,18 +288,25 @@ func GetMatchingFiles(dir string, filePattern string, fullpath bool)([]GetFilesR
 }
 
 func SearchLogs(directory string, filePattern string, searchQuery SearchQuery)([]SearchResult, error){
-	matchingFiles, _ := GetMatchingFiles(directory, filePattern, true)
 	
 	var filesToSearch []string
-	for _,eachFile := range matchingFiles {
-		filesToSearch = append(filesToSearch, eachFile.Name)
+	if len(searchQuery.Files) > 0 {
+		for _,eachFile := range searchQuery.Files {
+			filesToSearch = append(filesToSearch, filepath.Join(directory, eachFile))
+		}
+	}else{
+		matchingFiles, _ := GetMatchingFiles(directory, filePattern, true)
+		for _,eachFile := range matchingFiles {
+			filesToSearch = append(filesToSearch, eachFile.Name)
+		}
 	}
+	log.Info("Files to search in ", filesToSearch)
 
 	var args []string
 	if(searchQuery.Type == ".*"){
-		args = []string{"-n", "--max-count=50", searchQuery.SearchString}
+		args = []string{"-Hn", "--max-count=50", searchQuery.SearchString}
 	}else{
-		args = []string{"-Fn", "--max-count=50", searchQuery.SearchString}
+		args = []string{"-HFn", "--max-count=50", searchQuery.SearchString}
 	}
 	
 	args = append(args, filesToSearch...)

@@ -1,5 +1,6 @@
 import { Component } from 'react';
 import React from "react";
+import ReactDOM from "react-dom";
 import { connect } from 'react-redux';
 import Button from 'react-bootstrap/Button';
 import Form from 'react-bootstrap/Form'
@@ -31,6 +32,7 @@ export class MonitoringDirSettings extends Component {
         this.search = this.search.bind(this);
         this.continueTail = this.continueTail.bind(this);
         this.searchTextChangeHandler = this.searchTextChangeHandler.bind(this);
+        this.handleKeyPress = this.handleKeyPress.bind(this);
         this.state = {tail: false, searchStrType:'TXT'};
         this.togglesearchStrType = this.togglesearchStrType.bind(this);
    }
@@ -91,6 +93,14 @@ export class MonitoringDirSettings extends Component {
             this.setState({tailStartLogsLinesCount: this.props.logsCount});
             this.continueTail(this.props.app);
         }
+        console.log("App openSearch: " + this.props.app.openSearch);
+        if(this.props.app.openSearch){
+            let node = ReactDOM.findDOMNode(this.refs.inputNode);
+            if (node && node.focus instanceof Function) {
+                node.focus();
+            }
+            this.props.openSearchDone();
+        }
     }
 
     search(){
@@ -104,6 +114,12 @@ export class MonitoringDirSettings extends Component {
 
     searchTextChangeHandler(evt){
         this.props.setSearchText(this.props.app.Id,  evt.target.value);
+    }
+
+    handleKeyPress(evt){
+        const keyCode = evt.keyCode ? evt.keyCode : evt.charCode
+        if (keyCode === 13 /*Enter Key code */ || evt.which === 13 || evt.key === 'Enter')
+           this.search();
     }
       
     continueTail(app){
@@ -171,7 +187,7 @@ export class MonitoringDirSettings extends Component {
                         <InputGroup.Prepend>
                             <Button variant="outline-warning" onClick={() => this.togglesearchStrType()}>{this.state.searchStrType}</Button>
                         </InputGroup.Prepend>
-                        <FormControl aria-describedby="basic-addon1" value={searchText} onChange={(e) => this.searchTextChangeHandler(e)}/>
+                        <FormControl ref="inputNode" aria-describedby="basic-addon1" value={searchText} onKeyUp={(event) => this.handleKeyPress(event)} onChange={(e) => this.searchTextChangeHandler(e)} autoFocus={true}/>
                     </InputGroup>
                       
                     </div> 
@@ -231,7 +247,8 @@ const mapDispatchToProps = dispatch => {
         stopTail: (appId) => { dispatch({type: types.STOP_TAIL, payload: {'id':appId}});},
         getMoreLogs: (app)  => {dispatch(actions.getMoreLogs(app));},
         search:  (app, searchStrType) => {dispatch(actions.search(app, searchStrType));},
-        stopMonitoring: (appId) => { dispatch({type: types.STOP_MONITORING, payload: {'id':appId}});}
+        stopMonitoring: (appId) => { dispatch({type: types.STOP_MONITORING, payload: {'id':appId}});},
+        openSearchDone: () => {dispatch({type: types.OPEN_SEARCH_DONE, payload: {}})}
 	};
 };
 

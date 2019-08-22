@@ -1,5 +1,5 @@
 import { Component } from 'react';
-import React from "react";
+import React, {createRef} from "react";
 import { connect } from 'react-redux';
 import Container from 'react-bootstrap/Container'
 import Jumbotron from 'react-bootstrap/Jumbotron'
@@ -17,6 +17,7 @@ export class LogsViewer extends Component {
 		this.getLogsToDisplay = this.getLogsToDisplay.bind(this);
 		this.paneDidMount = this.paneDidMount.bind(this);
 		this.state = {items: [<div>1</div>], initialLoad:false}
+		this.startAfterSearch = undefined;
 	}
 
 	loadMoreLogs(){
@@ -60,14 +61,33 @@ export class LogsViewer extends Component {
 		}
 	}
 
+	componentDidUpdate(){
+		/*
+		console.log("componentDidUpdate life cycle method");
+		if(this.startAfterSearch){
+			console.log("Found startAfterSearch ref element");
+			//window.scrollTo(0, this.refs.startAfterSearch.offsetTop)   
+			this.startAfterSearch.scrollIntoView({ behavior: 'smooth', block: 'start' });
+
+		} else{
+			console.log("Not found startAfterSearch ref element");
+		}
+		*/
+	}
+
 
 	getLogsToDisplay(){
+		this.startAfterSearch  = createRef();
 		if(this.props.logs){
 			console.log("Logs length:" + this.props.logs.length);
 			var logsHtml = [];
 			for(var i = 0; i < this.props.logs.length;  i++){
 			//	logsHtml.push(<div style={{wordWrap: 'break-word', backgroundColor: '#6d6d6d', paddingTop:'1px', fontFamily: 'Verdana', color: 'white'}//}>  {this.props.logs[i]} </div>);
-				logsHtml.push(<div className={styles.logLine}>  {this.props.logs[i]} </div>);
+				//if( i === 10){
+				//	logsHtml.push(<div ref={this.startAfterSearch} className={styles.logLine}>  {this.props.logs[i]} </div>);
+				//}else{
+					logsHtml.push(<div className={styles.logLine}>  {this.props.logs[i]} </div>);
+				//}
 			}
 			logsHtml.push(this.props.activeMonitoringApp[0].loading ? '' : <div style={{cursor:'pointer'}} onClick={this.loadMoreLogs}>Click to load more..🥃</div>)
 			return logsHtml;

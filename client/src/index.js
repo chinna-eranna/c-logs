@@ -4,10 +4,18 @@ import {Provider} from 'react-redux';
 import configureStore from './store/configureStore';
 import ContentViewer from './components/contentViewer'
 import MonitoringAppLogList from './components/monitoringAppLogList'
-
+import * as actions from './actions/applicationActions'
 
 const store = configureStore();
 
+window.document.onkeyup = (event) => {
+    console.log("Key Pressed: ctrlKey: " + event.ctrlKey +  "  Shift:  "+ event.shiftKey + " Which:  " + event.which);
+    if(event.ctrlKey && event.shiftKey && event.which == 70){
+        store.dispatch(actions.openSearch());
+    }else{
+       console.log("else  part");
+    }
+}
 
 ReactDOM.render(
 <Provider store={store}>

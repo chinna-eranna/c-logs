@@ -1,4 +1,5 @@
 import * as types from './actionTypes';
+import * as _async from 'async'
 import {monitorHostLogs, getLogDirectories, startMonitoring, getLogMessages, searchInApp, resetMonitoring, getFiles} from '../services/appLogServices'
 
 export function monitorHost(host){
@@ -59,12 +60,27 @@ export function search(app, searchStrType) {
     return dispatch => {
         console.log("Starting search for app ", app.Name, " with search text ", app.searchText);
         dispatch({type: types.SEARCH_RESULTS_INPROGRESS, payload: {id: app.Id}});
-        searchInApp(app.Id, app.searchText, searchStrType).then(function(response){
-            dispatch({type: types.SEARCH_RESULTS, payload: {id: app.Id, searchResults: response.data}});
-            console.log("Successfully retrieved the search results for app " + response.data);
-        }, function(err){
-            console.log("Error in the search request ", err);
-            dispatch({type: types.SEARCH_RESULTS, payload: {id: app.Id, searchResults: err.response.data}});
+        getFiles(app.Directory, app.LogFilePattern).then(function(response){
+            if(response && response.data && response.data != null && response.data.length > 0){
+                const sortedFileList = _.sortBy(response.data, function(o) { return o.LastModified * -1; });
+                _async.mapLimit(sortedFileList, 1, (file, test) => {
+                    console.log("Invoked iteratee");
+                    searchInApp(app.Id, app.searchText, searchStrType, [file.Name]).then(function(response){
+                        dispatch({type: types.APPEND_SEARCH_RESULTS, payload: {id: app.Id, searchResults: response.data}});
+                        console.log("Successfully retrieved the search results for app " + response.data);
+                        test(null, response.data);
+                    }, function(err){
+                        console.log("Error in the search request ", err);
+                        dispatch({type: types.APPEND_SEARCH_RESULTS, payload: {id: app.Id, searchResults: err.response.data}});
+                    });
+                    
+                }, (error, results) => {
+                    console.log("Result is invoked, ", results);
+                })
+
+            }else{
+                console.log("No Files to search for");
+            }
         });
     }
 }
@@ -102,6 +118,12 @@ export function fetchFiles(directory, filePattern){
         }, function(err){
             console.log(`Error while getFiles for directory ${directory} - `, err);
         });
+    }
+}
+export function openSearch(){
+    return (dispatch) => {
+        //console.log("Search open request");
+        dispatch({type: types.OPEN_SEARCH, payload: {}});
     }
 }
 

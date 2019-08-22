@@ -67,17 +67,26 @@ export default function application(state = initialState, action){
         case types.TOGGLE_DISPLAY_SETTINGS:
             newState = updateArrayProperty(newState, 'monitoringApps', 'Id', action.payload.id, 'displaySettings', action.payload.displaySettings);
             break;
+        case types.OPEN_SEARCH:
+            newState = updateArrayProperty(newState, 'monitoringApps', 'Id', newState.activeAppId, 'displaySettings', true);
+            newState = updateArrayProperty(newState, 'monitoringApps', 'Id', newState.activeAppId, 'openSearch', true);
+            break;
+        case types.OPEN_SEARCH_DONE:
+            newState = updateArrayProperty(newState, 'monitoringApps', 'Id', newState.activeAppId, 'openSearch', false);
+            break;
         case types.SET_SEARCH_TEXT:
             newState = updateArrayProperty(newState, 'monitoringApps', 'Id', action.payload.id, 'searchText', action.payload.searchText);
             break;
         case types.SEARCH_RESULTS_INPROGRESS:
             newState = updateArrayProperty(newState,  'monitoringApps', 'Id', action.payload.id, 'contentViewKey','searchResults');
             newState = updateArrayProperty(newState,  'monitoringApps', 'Id', action.payload.id, 'searchInProgress',true);
+            newState = updateArrayProperty(newState,  'monitoringApps', 'Id', action.payload.id, 'searchResults', []);
             break;
-        case types.SEARCH_RESULTS:
-            newState = updateArrayProperty(newState,  'monitoringApps', 'Id', action.payload.id, 'searchResults', action.payload.searchResults);
+        case types.APPEND_SEARCH_RESULTS:
+            let searchResults = getArrayProperty(newState,  'monitoringApps', 'Id', action.payload.id, 'searchResults');
+            searchResults = searchResults.concat(action.payload.searchResults);
+            newState = updateArrayProperty(newState,  'monitoringApps', 'Id', action.payload.id, 'searchResults', searchResults);
             newState = updateArrayProperty(newState,  'monitoringApps', 'Id', action.payload.id, 'searchInProgress', false);
-            newState = updateArrayProperty(newState,  'monitoringApps', 'Id', action.payload.id, 'contentViewKey','searchResults');
            /*
             if(!action.payload.searchResults || action.payload.searchResults.length == 0){
                 newState = updateArrayProperty(newState,  'monitoringApps', 'Id', action.payload.id, 'searchResults', [{Name: "", Line: "", Text:"No Results"}]);
@@ -115,4 +124,16 @@ function updateArrayProperty(state, array, filterPropName, filterPropVal, propNa
    // const newArray = [...state[array]];
     //const newState = dotProp.set(state, array, newArray);
     return newState
+}
+
+function getArrayProperty(state, array, filterPropName, filterPropVal, propName ){
+    var newState = state;
+    for(var i in state[array]){
+        if (state[array][i][filterPropName] === filterPropVal){
+            return dotProp.get(state, `${array}.${i}.${propName}`)
+        }
+    }
+   // const newArray = [...state[array]];
+    //const newState = dotProp.set(state, array, newArray);
+    return [];
 }

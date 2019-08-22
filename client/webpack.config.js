@@ -13,6 +13,10 @@ module.exports = {
     path: __dirname + '/dist',
     filename: 'client.js'
   },
+  resolve: {
+    extensions: ['.wasm', '.js', '.json', '.mjs'],
+    mainFields: ['browser', 'main', 'module']
+  },
   module: {
     rules: [
       {

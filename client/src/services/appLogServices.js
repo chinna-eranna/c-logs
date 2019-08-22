@@ -60,9 +60,9 @@ function getLogMessages(appId, fullContent){
     });
 }
 
-function searchInApp(appId, searchString, searchStrType){
+function searchInApp(appId, searchString, searchStrType, files){
     return new Promise((resolve, reject)=> {
-        axios.post(`/v1/logDirectories/${appId}/search`, {SearchString: searchString, Type:searchStrType}).then(function(response){
+        axios.post(`/v1/logDirectories/${appId}/search`, {SearchString: searchString, Type:searchStrType, Files: files}).then(function(response){
             resolve(response);
         }).catch(function(err){
             reject(err);
@@ -82,7 +82,7 @@ function resetMonitoring(appId, file, lineNumber){
 
 function getFiles(directory, filePattern) {
     return new Promise((resolve, reject) => {
-        axios.get(`/v1/files/${directory}?pattern=${filePattern}`).then(function (response) {
+        axios.get(`/v1/files${directory}?pattern=${filePattern}`).then(function (response) {
             console.log("Got files: " + JSON.stringify(response));
             resolve(response);
         }).catch(function (err) {
