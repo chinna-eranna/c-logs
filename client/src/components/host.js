@@ -31,10 +31,6 @@ export class Host extends Component {
 
     render (){
         let content = '';
-        console.log("Props:  " + JSON.stringify(this.props));
-        if(this.props.host){
-            console.log("Host length :  " + this.props.host.length);
-        }
         if (this.props.host && this.props.host.length > 0){
             content =  (
                 <Container>
@@ -81,7 +77,6 @@ export class Host extends Component {
 
 
 const mapStateToProps = state => {
-    console.log("mapstate: " +  JSON.stringify(state))
 	return {
 		host: state.application.host
 	};

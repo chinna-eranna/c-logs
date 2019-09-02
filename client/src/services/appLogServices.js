@@ -15,7 +15,6 @@ function monitorHostLogs(hostIp){
 function  getLogDirectories(){
     return new Promise((resolve, reject) => {
         axios.get("/v1/logDirectories").then(function(response){
-            console.log("Applications from ajax: " + JSON.stringify(response));
             resolve(response);
         }).catch(function(err){
             console.log("fetchApplications()::Error from ajax: " + err);
@@ -49,7 +48,6 @@ function getLogMessages(appId, fullContent){
             //add content-type header
             logMsgRequests[appId] = true;
             axios.get(`/v1/logDirectories/${appId}/logs?fullContent=${fullContent}`).then(function(response){
-                console.log("Got logs: " + JSON.stringify(response));
                 resolve(response);
                 logMsgRequests[appId]  = false;
             }).catch(function(err){

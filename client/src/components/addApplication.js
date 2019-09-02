@@ -17,6 +17,7 @@ import ModalTitle from 'react-bootstrap/ModalTitle'
 import ModalBody from 'react-bootstrap/ModalBody'
 import ModalFooter from 'react-bootstrap/ModalFooter'
 import Form from 'react-bootstrap/Form'
+import * as types from '../actions/actionTypes';
 
 import * as actions from '../actions/applicationActions'
 import moment from 'moment'
@@ -40,16 +41,21 @@ export class AddApplication extends Component {
 		this.readFullFileContent = this.readFullFileContent.bind(this);
 		this.handleReadFullFileContent  = this.handleReadFullFileContent.bind(this);
 		this.state = { selectApplication: false, selectedApp: '-None-', startLogFile:this.newLogs, readFullFileContent:false };
+		
 	}
 	handleAddAppLog() {
+		const reset = this.props.resetApp ? true: false;
+		if(this.props.resetApp){
+			this.props.resetAppDone();
+		}
 		if (this.state.selectedApp === '-None-') {
 			return;
 		}
 		const appToBeMonitored = this.props.availableApps.filter((app, index) => {
 			return app.Name == this.state.selectedApp
 		});
-		console.log("Application To Be monitored:" + JSON.stringify(appToBeMonitored));
-		this.props.monitorAppLog(appToBeMonitored[0], this.state.startLogFile, this.state.readFullFileContent);
+		
+		this.props.monitorAppLog(appToBeMonitored[0], this.state.startLogFile, this.state.readFullFileContent, reset);
 		this.setState({ selectApplication: false, selectedApp: '-None-', startLogFile:'New Logs'});
 	}
 
@@ -59,7 +65,6 @@ export class AddApplication extends Component {
 
 	handleReadFullFileContent(){
 		this.setState({readFullFileContent:!this.state.readFullFileContent});
-		console.log("State after toggling read full file content: " + this.state);
 	}
 
 	addApplication() {
@@ -67,7 +72,6 @@ export class AddApplication extends Component {
 	}
 
 	selectApplication(eventKey, event) {
-		console.log("Selected Application: " + eventKey);
 		this.setState({ selectedApp: eventKey });
 		var selectedApps = this.props.availableApps.filter((app, index) => {
 			return app.Name === eventKey;
@@ -77,8 +81,21 @@ export class AddApplication extends Component {
 	}
 
 	selectLog(eventKey, event) {
-		console.log("Selected Log: " + eventKey);
 		this.setState({ startLogFile: eventKey });
+	}
+
+	static getDerivedStateFromProps (nextProps, prevState) {
+		console.log("Get DerivedState From Props: " + JSON.stringify(prevState));
+		if(nextProps && prevState){
+			const newState = prevState;
+			if(nextProps.resetApp && !prevState.selectApplication){
+				console.log("Resetting AddApplication state for resetting application " + nextProps.resetApp);
+				newState.selectApplication = true;
+				newState.selectedApp = nextProps.resetApp;
+				return newState;
+			}
+		}
+		return null;
 	}
 
 	getAvailableApps() {
@@ -92,36 +109,47 @@ export class AddApplication extends Component {
 			if (!monitoringAppNames.has(app.Name)) {
 				availableAppNames.add(app.Name);
 			}
-			console.log("Application being added: " + app.appName);
 		});
 
 
 
-		console.log("Total unique applications: " + availableAppNames.size);
 		let availableAppsContent = [];
 		for (let app of availableAppNames) {
 			availableAppsContent.push(<Dropdown.Item size="sm" eventKey={app} key={app}>{app}</Dropdown.Item>);
 		}
 
 		let selectedApp = this.state.selectedApp ? this.state.selectedApp : '-None-';
-		let selectAppContent = (<DropdownButton size="sm" as={InputGroup.Prepend} variant="outline-secondary"
-			title={selectedApp} id="input-group-dropdown-1" onSelect={this.selectApplication} >
-			<div style={{maxHeight:'10em', overflowY:  'scroll'}}>
-			{availableAppsContent}
-			</div>
-		</DropdownButton>);
+		let selectAppContent = ''
+		if(this.props.resetApp){
+			selectAppContent = (
+				<InputGroup size="sm" className="mb-3">
+					<InputGroup.Prepend>
+						<InputGroup.Text id="basic-addon1">Choose Application</InputGroup.Text>
+					</InputGroup.Prepend>
+					{this.props.resetApp}
+				</InputGroup>);
+		}else{
+			selectAppContent = (
+				<InputGroup size="sm" className="mb-3">
+					<InputGroup.Prepend>
+						<InputGroup.Text id="basic-addon1">Choose Application</InputGroup.Text>
+					</InputGroup.Prepend>
+					<DropdownButton size="sm" as={InputGroup.Prepend} variant="outline-secondary"
+					title={selectedApp} id="input-group-dropdown-1" onSelect={this.selectApplication} >
+						<div style={{maxHeight:'10em', overflowY:  'scroll'}}>
+							{availableAppsContent}
+						</div>
+					</DropdownButton>
+				</InputGroup>
+			);
+		}
 
 
 		let startFromContent = this.getStartFromContent();
 		let readFullFileContent = this.readFullFileContent();
 		return (
 			<div>
-				<InputGroup size="sm" className="mb-3">
-					<InputGroup.Prepend>
-						<InputGroup.Text id="basic-addon1">Choose Application</InputGroup.Text>
-					</InputGroup.Prepend>
-					{selectAppContent}
-				</InputGroup>
+				{selectAppContent}
 				{startFromContent}
 				{readFullFileContent}
 			</div>
@@ -207,16 +235,19 @@ export class AddApplication extends Component {
 }
 
 const mapStateToProps = state => {
+	console.log("State in Add Application: " + state);
 	return {
 		availableApps: state.application.availableApps,
 		monitoringApps: state.application.monitoringApps,
-		filesList: state.application.filesList
+		filesList: state.application.filesList,
+		resetApp: state.application.resetApp
 	};
 };
 
 const mapDispatchToProps = dispatch => {
 	return {
-		monitorAppLog: (app, startLogFile, readFullFileContent) => { dispatch(actions.monitorAppLog(app, startLogFile, readFullFileContent)); },
+		monitorAppLog: (app, startLogFile, readFullFileContent, reset) => { dispatch(actions.monitorAppLog(app, startLogFile, readFullFileContent, reset)); },
+		resetAppDone: () => { dispatch({type: types.RESET_APP_DONE, payload: {}})},
 		getFiles: (directory, pattern) => {dispatch(actions.fetchFiles(directory, pattern)); },
 		clearFilesList: () => {dispatch({type: types.FILES_LIST, payload:{filesList:[]}})}
 	};

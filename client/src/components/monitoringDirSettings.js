@@ -26,6 +26,7 @@ export class MonitoringDirSettings extends Component {
         super(props);
         this.selectLogDir = this.selectLogDir.bind(this);
         this.handleClearLogs = this.handleClearLogs.bind(this);
+        this.handleReset = this.handleReset.bind(this);
         this.handleRemove = this.handleRemove.bind(this);
         this.toggleDisplaySettings = this.toggleDisplaySettings.bind(this);
         this.handleSwitch = this.handleSwitch.bind(this);
@@ -43,6 +44,10 @@ export class MonitoringDirSettings extends Component {
 
     handleClearLogs(){
         this.props.clearLogs(this.props.app.Id);
+    }
+
+    handleReset(){
+        this.props.resetApp(this.props.app);
     }
 
     handleRemove(){
@@ -68,7 +73,6 @@ export class MonitoringDirSettings extends Component {
     }
 
     toggleDisplaySettings(){
-        console.log("Toggle display settings invoked DisplaySettings ");
         if(this.props.app.displaySettings){
             this.props.hideSettings(this.props.app.Id);
         }else{
@@ -78,7 +82,6 @@ export class MonitoringDirSettings extends Component {
 	componentDidMount(){
 		if(this.props.app.tail){
             this.setState({tailStartLogsLinesCount: this.props.logsCount});
-            console.log("component mounting State: " + JSON.stringify(this.state));
             this.continueTail(this.props.app);
         }
     }
@@ -89,11 +92,9 @@ export class MonitoringDirSettings extends Component {
 
     componentDidUpdate(){
         if(this.props.app.tail && !this.state.tail){
-            console.log("componentDidUpdate: Tail is not running but set, starting tail");
             this.setState({tailStartLogsLinesCount: this.props.logsCount});
             this.continueTail(this.props.app);
         }
-        console.log("App openSearch: " + this.props.app.openSearch);
         if(this.props.app.openSearch){
             let node = ReactDOM.findDOMNode(this.refs.inputNode);
             if (node && node.focus instanceof Function) {
@@ -105,7 +106,6 @@ export class MonitoringDirSettings extends Component {
 
     search(){
         if(this.props.app.searchText  && this.props.app.searchText.length > 0){
-            console.log("Search is being trigger for app ", this.props.app)
             this.props.search(this.props.app, this.state.searchStrType);
         }else{
             console.log("Search is not trigger for app ", this.props.app, "as searchText is null")
@@ -124,10 +124,11 @@ export class MonitoringDirSettings extends Component {
       
     continueTail(app){
         this.setState({tail: true});
-        console.log("Tailing app: " + JSON.stringify(app) + " State: " + JSON.stringify(this.state));
-        console.log("LogsCount :", this.props.logsCount , " tailStartLogsLinesCount : ", this.state.tailStartLogsLinesCount);
-        console.log("this.state.tailStartLogsLinesCount :", this.state.tailStartLogsLinesCount , " Difference : ", (this.props.logsCount - this.state.tailStartLogsLinesCount));
-        if(this.state.tailStartLogsLinesCount != undefined && ((this.props.logsCount - this.state.tailStartLogsLinesCount) >= 1000)){
+        if(this.state.tailStartLogsLinesCount === undefined){
+            this.setState({tailStartLogsLinesCount: this.props.logsCount});
+        }
+        console.log("props.logsCount : " + this.props.logsCount + " : this.state.tailStartLogsLinesCount - " + this.state.tailStartLogsLinesCount);
+        if((this.props.logsCount - this.state.tailStartLogsLinesCount) >= 200){
             console.log("Stopping the trail");
             this.props.stopTail(app.Id);
             this.setState({tail: false});
@@ -138,7 +139,7 @@ export class MonitoringDirSettings extends Component {
                 if(this.props.app.tail){
                     this.continueTail(app);
                 }
-            }, 1000);
+            }, 100);
         }
     }
 
@@ -157,8 +158,32 @@ export class MonitoringDirSettings extends Component {
         if(this.props.app.displaySettings){
             settingsContent = ( 
             <div style={{border:'1px dashed black', padding:'2px',borderRadius:'0.0rem 0.0rem .2rem.2rem', marginBottom:'2px', borderColor:'yellow'}}>
-                
                 <div style={{display:'flex', marginTop:'3px'}}>
+                    <div style={{flexGrow:'1'}}>
+                    <InputGroup size="sm">
+                        <InputGroup.Prepend>
+                            <Button variant="outline-warning" onClick={() => this.togglesearchStrType()}>{this.state.searchStrType}</Button>
+                        </InputGroup.Prepend>
+                        <FormControl ref="inputNode" aria-describedby="basic-addon1" value={searchText} onKeyUp={(event) => this.handleKeyPress(event)} onChange={(e) => this.searchTextChangeHandler(e)} autoFocus={true}/>
+                    </InputGroup>
+                      
+                    </div> 
+                    <div style={{cursor: 'pointer', padding: '2px 5px 0px 5px' , fontSize: '20px'}} onClick={(e) => this.search()}>🔍</div>
+                </div>
+                <div style={{marginTop:'0.5rem', marginRight: '10px'}}>
+                    <InputGroup size="sm">
+                        <InputGroup.Prepend>
+                            <InputGroup.Text id="basic-addon1">Actions</InputGroup.Text>
+                        </InputGroup.Prepend>
+                        <DropdownButton size="sm" variant="outline-warning" id="dropdown-basic-button" title="-Choose Action-">
+                            <Dropdown.Item onClick={this.handleClearLogs}>Clear Logs</Dropdown.Item>
+                            <Dropdown.Item onClick={this.handleRemove}>Remove</Dropdown.Item>
+                            <Dropdown.Item onClick={this.handleReset}>Reset</Dropdown.Item>
+                        </DropdownButton>
+                    </InputGroup>
+                </div>
+               
+                <div style={{display:'flex', marginTop:'0.5rem'}}>
                     <div style={{flexGrow:'1', textAlign:'left'}}>
                         <div style={{display:'flex'}}>
                             <div style={{paddingRight: '0.5rem'}}>Tail :</div>
@@ -178,28 +203,6 @@ export class MonitoringDirSettings extends Component {
                                 id="material-switch"
                             />
                         </div>
-                    </div>
-                </div>
-
-                <div style={{display:'flex', marginTop:'3px'}}>
-                    <div style={{flexGrow:'1'}}>
-                    <InputGroup>
-                        <InputGroup.Prepend>
-                            <Button variant="outline-warning" onClick={() => this.togglesearchStrType()}>{this.state.searchStrType}</Button>
-                        </InputGroup.Prepend>
-                        <FormControl ref="inputNode" aria-describedby="basic-addon1" value={searchText} onKeyUp={(event) => this.handleKeyPress(event)} onChange={(e) => this.searchTextChangeHandler(e)} autoFocus={true}/>
-                    </InputGroup>
-                      
-                    </div> 
-                    <div style={{cursor: 'pointer', padding: '2px 5px 0px 5px' , fontSize: '20px'}} onClick={(e) => this.search()}>🔍</div>
-                </div>
-                
-                <div style={{display:'flex', marginTop:'0.5rem', marginRight: '10px'}}>
-                    <div>
-                        <Button variant="danger" size="sm" onClick={this.handleClearLogs} style={{marginRight:'10px'}}>Clear Logs</Button>
-                    </div>
-                    <div>
-                        <Button variant="danger" size="sm" onClick={this.handleRemove} style={{marginRight:'10px'}}>Remove</Button>
                     </div>
                 </div>
             </div>
@@ -239,6 +242,7 @@ const mapDispatchToProps = dispatch => {
 	return {
         selectApp:(appId) => { dispatch({type: types.SELECT_APP, payload: {'id':appId}});},
         clearLogs: (appId) => {dispatch({type: types.CLEAR_LOGS, payload:{'id': appId}});},
+        resetApp: (app) => {dispatch(actions.resetApp(app));},
         showSettings: (appId) => {dispatch({type: types.TOGGLE_DISPLAY_SETTINGS, payload:{'id': appId, 'displaySettings':true}})},
         hideSettings: (appId) => {dispatch({type: types.TOGGLE_DISPLAY_SETTINGS, payload:{'id': appId, 'displaySettings':false}})},
         setSearchText: (appId, searchText) =>  {dispatch({type: types.SET_SEARCH_TEXT, payload: {'id' : appId, 'searchText': searchText}})},

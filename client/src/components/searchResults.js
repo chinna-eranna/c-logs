@@ -17,7 +17,6 @@ export class SearchResults extends Component {
     }
 
     showLogs(file, lineNumber){
-        console.log("Clicked file: ", file, " line: ", lineNumber);
         this.props.reset(this.props.activeMonitoringApp, file, lineNumber);
     }
 
@@ -47,14 +46,12 @@ export class SearchResults extends Component {
 }
 
 const mapStateToProps = state => {
-	console.log("Invoking state Logs Viewer connect ---");
 	return {
-		
-	};
+
+    };
 };
 
 const mapDispatchToProps = dispatch => {
-	console.log("Invoking dispatch SearchResults connect ---");
 	return {
         reset: (app, file, lineNumber) => {dispatch(actions.reset(app, file, lineNumber));}
 	};

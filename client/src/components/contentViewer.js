@@ -25,26 +25,27 @@ export class ContentViewer extends Component {
 	}
 
 	componentDidUpdate(){
-		console.log("Update life cycle method");
-		if(this.refs.elem && this.props.activeMonitoringApp.length > 0){
-			this.refs.elem.scrollTop = this.props.activeMonitoringApp[0].scrollTop;
-		}else{
-			console.log("Ref is not defined yet");
+		if(this.refs.elem && this.props.activeMonitoringApp.length > 0 && this.props.activeMonitoringApp[0].resetScrollTop){
+			this.refs.elem.scrollTop = this.props.activeMonitoringApp[0].resetScrollTopValue;
+			this.props.resetScrollPositionDone();
 		}
 	}
 
 	render() {
-		console.log("ActiveMonitoringApp in ContentViewer :", this.props.activeMonitoringApp);
 		if (this.props.activeMonitoringApp.length > 0 && 
 			((this.props.activeMonitoringApp[0].searchResults && this.props.activeMonitoringApp[0].searchResults.length >= 0) || this.props.activeMonitoringApp[0].searchInProgress)) {
 			return (
-				<div ref="elem" onScroll={ this.onScroll }  style={{height:'100vh', overflow:'auto', border:'2px solid black',}}>
+				<div style={{height:'100vh', border:'2px solid black'}}>
                 <Tabs id="content-viewer" activeKey={this.props.activeMonitoringApp[0].contentViewKey} onSelect={key => this.selectView(key)} >
                     <Tab eventKey="logs" title="Logs">
-						<LogsViewer logs={this.props.logs} activeMonitoringApp={this.props.activeMonitoringApp}/>
+						<div ref="elem" id="logsDiv" onScroll={ this.onScroll }  style={{height:'95vh', overflow:'auto'}}>
+							<LogsViewer logs={this.props.logs} activeMonitoringApp={this.props.activeMonitoringApp}/>
+						</div>
                     </Tab>
                     <Tab eventKey="searchResults" title="Search Results">
+					<div ref="searchElem" onScroll={ this.onScroll }  style={{height:'95vh', overflow:'auto'}}>
                         <SearchResults activeMonitoringApp={this.props.activeMonitoringApp[0]}/>
+					</div>
                     </Tab>
                 </Tabs>
 				</div>
@@ -66,7 +67,8 @@ const mapStateToProps = state => {
 const mapDispatchToProps = dispatch => {
 	return {
 		selectContentView: (appId, key) => {dispatch({type: types.SELECT_CONTENT_VIEW, payload:{'id': appId, 'contentViewKey':key}})},
-		setScrollPosition:(topPosition) => { dispatch({type: types.SET_SCROLL_POSITION, payload: {'top':topPosition}});}
+		setScrollPosition:(topPosition) => { dispatch({type: types.SET_SCROLL_POSITION, payload: {'top':topPosition}});},
+		resetScrollPositionDone: () => {dispatch({type: types.RESET_SCROLL_POSITION_DONE, payload:{}})}
 	};
 };
 

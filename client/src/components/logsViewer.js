@@ -8,6 +8,8 @@ import { getLogMessages } from '../services/appLogServices';
 import *  as actions from '../actions/applicationActions';
 import * as types from '../actions/actionTypes';
 import styles from '../css/app.css';
+import _ from 'lodash'
+import scrollToComponent from 'react-scroll-to-component';
 
 export class LogsViewer extends Component {
 
@@ -17,12 +19,11 @@ export class LogsViewer extends Component {
 		this.getLogsToDisplay = this.getLogsToDisplay.bind(this);
 		this.paneDidMount = this.paneDidMount.bind(this);
 		this.state = {items: [<div>1</div>], initialLoad:false}
-		this.startAfterSearch = undefined;
+		this.startAfterSearch  = createRef();
 	}
 
 	loadMoreLogs(){
 		//if(this.props.activeMonitoringApp[0].tail){
-			console.log("Load more logs invoked");
 			this.props.getMoreLogs(this.props.activeMonitoringApp[0]);
 		//}else{
 		//	console.log("Tailing is OFF, hence not loading");
@@ -30,18 +31,15 @@ export class LogsViewer extends Component {
 	}
 
 	componentDidMount(){
-		console.log("Mount life cycle method");
 	}
 
 	paneDidMount(node){
-		console.log("Node did mount");
 		if (node) {
 		  node.addEventListener('scroll', () => console.log('scroll! Left: ' + node.scrollLeft + " Top:" + node.scrollTop));
 		}
 	};
 
 	render() {
-		console.log("Active Monitoring App in LogsViewer render : ", this.props.activeMonitoringApp);
 		if (this.props.activeMonitoringApp && this.props.activeMonitoringApp.length > 0) {
 			return (
 				<div style={{padding:'2px'}}>
@@ -62,32 +60,34 @@ export class LogsViewer extends Component {
 	}
 
 	componentDidUpdate(){
-		/*
-		console.log("componentDidUpdate life cycle method");
-		if(this.startAfterSearch){
-			console.log("Found startAfterSearch ref element");
-			//window.scrollTo(0, this.refs.startAfterSearch.offsetTop)   
-			this.startAfterSearch.scrollIntoView({ behavior: 'smooth', block: 'start' });
+		console.log("ScrollToLine: this.startAfterSearch - " + this.startAfterSearch);
+		console.log("ScrollToLine: this.startAfterSearch.current - " + this.startAfterSearch.current);
 
+		if(this.props.logs && this.props.activeMonitoringApp[0].scrollToLine && 
+			this.props.activeMonitoringApp[0].scrollToLine > 0 && this.props.logs.length >= this.props.activeMonitoringApp[0].scrollToLine
+			&& this.startAfterSearch.current){
+			this.props.resetScrollPosition(this.startAfterSearch.current.offsetTop, this.props.activeMonitoringApp[0]);
+			this.startAfterSearch  = createRef();
 		} else{
-			console.log("Not found startAfterSearch ref element");
+			console.log("Not resetting scroll position after logsviewer componentDidUpdate");
 		}
-		*/
+		
 	}
 
 
 	getLogsToDisplay(){
-		this.startAfterSearch  = createRef();
 		if(this.props.logs){
-			console.log("Logs length:" + this.props.logs.length);
+			console.log("Rendering logs of length:" + this.props.logs.length);
 			var logsHtml = [];
 			for(var i = 0; i < this.props.logs.length;  i++){
 			//	logsHtml.push(<div style={{wordWrap: 'break-word', backgroundColor: '#6d6d6d', paddingTop:'1px', fontFamily: 'Verdana', color: 'white'}//}>  {this.props.logs[i]} </div>);
-				//if( i === 10){
-				//	logsHtml.push(<div ref={this.startAfterSearch} className={styles.logLine}>  {this.props.logs[i]} </div>);
-				//}else{
+				if( this.props.activeMonitoringApp[0].scrollToLine && i === this.props.activeMonitoringApp[0].scrollToLine - 1){
+					logsHtml.push(<div ref={this.startAfterSearch} className={styles.highlightLine}>  {this.props.logs[i]} </div>);
+				}else if(this.props.activeMonitoringApp[0].highlightedLines.indexOf(i) >= 0){
+					logsHtml.push(<div className={styles.highlightLine}>  {this.props.logs[i]} </div>);
+				}else{
 					logsHtml.push(<div className={styles.logLine}>  {this.props.logs[i]} </div>);
-				//}
+				}
 			}
 			logsHtml.push(this.props.activeMonitoringApp[0].loading ? '' : <div style={{cursor:'pointer'}} onClick={this.loadMoreLogs}>Click to load more..🥃</div>)
 			return logsHtml;
@@ -111,6 +111,7 @@ const mapStateToProps = state => {
 const mapDispatchToProps = dispatch => {
 	return {
 		getMoreLogs: (app)  => {dispatch(actions.getMoreLogs(app));},
+		resetScrollPosition:(topPosition, app) => { dispatch({type: types.RESET_SCROLL_POSITION, payload: {id: app.Id, 'top':topPosition}});}
 	};
 };
 

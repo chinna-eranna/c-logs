@@ -32,19 +32,16 @@ export class MonitoringAppLogList extends Component {
 	}
 
     selectApplication(appId) {
-        console.log("List item clicked: " +  appId);
         this.props.selectApp(appId);
     }
   
 
 	render() {
         let appLogItems = [];
-        console.log("Rendering MonitoringAppLogList")
-
+       
         this.props.monitoringApps.map((app, index) => {
             const appId = `${app.Id}` ;
             const active = (app.Id === this.props.activeAppId) ? true: false;
-            console.log("AppName: "+ app.Name + " Active: " + active);
             appLogItems.push(<MonitoringDirSettings app={app} logsCount={app.logsCount}/>)
         }); 
 
@@ -52,7 +49,6 @@ export class MonitoringAppLogList extends Component {
             <div style={{textAlign:'center'}}>
                 <hr style={{border:'2px solid #ffc107'}}/>
                
-
                 <AddApplication/>
   
                 {appLogItems}

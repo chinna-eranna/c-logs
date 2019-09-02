@@ -11,6 +11,9 @@ module.exports = {
     path: __dirname + '/dist',
     filename: 'client.js'
   },
+  resolve: {
+    extensions: ['.wasm', '.js', '.json']
+  },
   module: {
     rules: [
       {

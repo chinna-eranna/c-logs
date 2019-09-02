@@ -33,10 +33,14 @@ export function fetchApplications(){
 }
 
 
-export function monitorAppLog(app, startLogFile, fullContent){
+export function monitorAppLog(app, startLogFile, fullContent, reset){
     return dispatch => {
         //TODO a progress bar should be displayed before starting the monitoring
         startMonitoring(app.Id, startLogFile).then(function(response){
+            if(reset){
+                console.log("dispatch stopMonitoring in actions");
+                dispatch({type: types.STOP_MONITORING, payload: {'id':app.Id}});
+            }
            dispatch({type: types.MONITOR_APP_LOG, payload: {monitoringApp: app, tail: !fullContent}});
            if(fullContent){
                console.log("Getting the full conetent of the file ", startLogFile);
@@ -64,10 +68,8 @@ export function search(app, searchStrType) {
             if(response && response.data && response.data != null && response.data.length > 0){
                 const sortedFileList = _.sortBy(response.data, function(o) { return o.LastModified * -1; });
                 _async.mapLimit(sortedFileList, 1, (file, test) => {
-                    console.log("Invoked iteratee");
                     searchInApp(app.Id, app.searchText, searchStrType, [file.Name]).then(function(response){
                         dispatch({type: types.APPEND_SEARCH_RESULTS, payload: {id: app.Id, searchResults: response.data}});
-                        console.log("Successfully retrieved the search results for app " + response.data);
                         test(null, response.data);
                     }, function(err){
                         console.log("Error in the search request ", err);
@@ -86,7 +88,7 @@ export function search(app, searchStrType) {
 }
 
 export function getMoreLogs(app){
-    console.log("Invoked getMoreLogs for app  " + JSON.stringify(app)) ; 
+    console.log("Invoked getMoreLogs for app  " + app.Name) ; 
     return dispatch  => {   
         getLogs(app, dispatch);
     }
@@ -94,11 +96,14 @@ export function getMoreLogs(app){
 
 export function reset(app, file, lineNumber){
     return dispatch => {
-        resetMonitoring(app.Id, file, lineNumber).then(function(response){
+        var adjustedLineNumberToLoad = lineNumber > 100 ? lineNumber - 100 : 1;
+        var adjustedLineNumberToScroll = lineNumber > 100 ? 100 : parseInt(lineNumber);
+        resetMonitoring(app.Id, file, adjustedLineNumberToLoad).then(function(response){
             console.log("Successfully reset monitoring");
             dispatch({type: types.CLEAR_LOGS, payload: {id: app.Id}})
             dispatch({type: types.START_TAIL, payload: {id: app.Id}})
             dispatch({type: types.SET_SCROLL_POSITION, payload: {'top':0}});
+            dispatch({type: types.SCROLL_TO_LINE, payload: {id: app.Id, 'scrollToLine':adjustedLineNumberToScroll}});
             dispatch({type: types.SELECT_CONTENT_VIEW, payload:{'id': app.Id, 'contentViewKey':'logs'}})
         }, function(err){
             console.log("Error while reset monitoring - ", err);
@@ -127,8 +132,23 @@ export function openSearch(){
     }
 }
 
+export function resetApp(app){
+    return (dispatch) => {
+        getFiles(app.Directory, app.LogFilePattern).then(function(response){
+            if(response && response.data && response.data != null && response.data.length > 0){
+                dispatch({type: types.FILES_LIST, payload: {filesList: response.data}});
+                dispatch({type: types.RESET_APP, payload:{'name': app.Name}});
+            }else{
+                console.log("No Files to list");
+            }
+        }, function(err){
+            console.log(`Error while fetchFilesWithPromise for directory ${directory} - `, app.Directory);
+        });
+       
+    }
+}
+
 function getLogs(app, dispatch){
-    console.log("getLogs: app: " + JSON.stringify(app));
     dispatch({type: types.FETCH_LOGS_START, payload: {id:app.Id}});
     getLogMessages(app.Id, false).then((response) => {logsResponseHandler(app, dispatch, response)});
 }
@@ -136,8 +156,8 @@ function getLogs(app, dispatch){
 function logsResponseHandler(app, dispatch, response){
         var logsLinesCount = 0;
         if(response && response.data && response.data != null && response.data.length > 0){
-            console.log("Got logs in logsResponseHandler");
-            dispatch({type: types.LOGS_MESSAGES, payload: {appId:app.Id, logs:response.data}});
+            console.log("Got logs for app " + app.Name);
+            dispatch({type: types.LOGS_MESSAGES, payload: {id:app.Id, logs:response.data}});
             dispatch({type:  types.FETCH_LOGS_END, payload: {id:app.Id, logsCount:response.data.length}});
             logsLinesCount = response.data.length;
         }else{
