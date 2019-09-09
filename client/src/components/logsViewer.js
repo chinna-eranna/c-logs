@@ -17,9 +17,9 @@ export class LogsViewer extends Component {
 		super(props);
 		this.loadMoreLogs = this.loadMoreLogs.bind(this);
 		this.getLogsToDisplay = this.getLogsToDisplay.bind(this);
-		this.paneDidMount = this.paneDidMount.bind(this);
 		this.state = {items: [<div>1</div>], initialLoad:false}
 		this.startAfterSearch  = createRef();
+		this.bookmarkLine =  this.bookmarkLine.bind(this);
 	}
 
 	loadMoreLogs(){
@@ -30,19 +30,17 @@ export class LogsViewer extends Component {
 		//}
 	}
 
-	componentDidMount(){
+	bookmarkLine(line){
+		console.log("Clicked line:  " + line);
+		this.props.bookmarkLine(this.props.activeMonitoringApp[0], line);
 	}
 
-	paneDidMount(node){
-		if (node) {
-		  node.addEventListener('scroll', () => console.log('scroll! Left: ' + node.scrollLeft + " Top:" + node.scrollTop));
-		}
-	};
+	componentDidMount(){
+	}
 
 	render() {
 		if (this.props.activeMonitoringApp && this.props.activeMonitoringApp.length > 0) {
 			return (
-				<div style={{padding:'2px'}}>
 				<InfiniteScroll
 					initialLoad={this.state.initialLoad}
 					pageStart={0}
@@ -52,7 +50,6 @@ export class LogsViewer extends Component {
 					useWindow={false}>
 					{this.getLogsToDisplay()}
 				</InfiniteScroll>
-			</div>
 			)
 		} else{
 			return (<div style={{padding:'2px'}}><Container> Please select an application to view logs </Container></div>);
@@ -82,11 +79,11 @@ export class LogsViewer extends Component {
 			for(var i = 0; i < this.props.logs.length;  i++){
 			//	logsHtml.push(<div style={{wordWrap: 'break-word', backgroundColor: '#6d6d6d', paddingTop:'1px', fontFamily: 'Verdana', color: 'white'}//}>  {this.props.logs[i]} </div>);
 				if( this.props.activeMonitoringApp[0].scrollToLine && i === this.props.activeMonitoringApp[0].scrollToLine - 1){
-					logsHtml.push(<div ref={this.startAfterSearch} className={styles.highlightLine}>  {this.props.logs[i]} </div>);
+					logsHtml.push(<div className={styles.logLineParent}><div ref={this.startAfterSearch} className={styles.highlightLine}>  <div className={styles.logLineActions} onClick={this.bookmarkLine.bind(this, i)}>⭐</div>{this.props.logs[i]} </div></div>);
 				}else if(this.props.activeMonitoringApp[0].highlightedLines.indexOf(i) >= 0){
-					logsHtml.push(<div className={styles.highlightLine}>  {this.props.logs[i]} </div>);
+					logsHtml.push(<div className={styles.logLineParent}><div className={styles.highlightLine}> <div className={styles.logLineActions}onClick={this.bookmarkLine.bind(this, i)}>⭐</div> {this.props.logs[i]} </div></div>);
 				}else{
-					logsHtml.push(<div className={styles.logLine}>  {this.props.logs[i]} </div>);
+					logsHtml.push(<div className={styles.logLineParent}><div className={styles.logLine}> <div className={styles.logLineActions} onClick={this.bookmarkLine.bind(this, i)}>⭐</div> {this.props.logs[i]} </div></div>);
 				}
 			}
 			logsHtml.push(this.props.activeMonitoringApp[0].loading ? '' : <div style={{cursor:'pointer'}} onClick={this.loadMoreLogs}>Click to load more..🥃</div>)
@@ -111,7 +108,8 @@ const mapStateToProps = state => {
 const mapDispatchToProps = dispatch => {
 	return {
 		getMoreLogs: (app)  => {dispatch(actions.getMoreLogs(app));},
-		resetScrollPosition:(topPosition, app) => { dispatch({type: types.RESET_SCROLL_POSITION, payload: {id: app.Id, 'top':topPosition}});}
+		resetScrollPosition:(topPosition, app) => { dispatch({type: types.RESET_SCROLL_POSITION, payload: {id: app.Id, 'top':topPosition}});},
+		bookmarkLine: (app, line) => {dispatch({type: types.BOOKMARK_LINE, payload: {id: app.Id, line: line}});}
 	};
 };
 

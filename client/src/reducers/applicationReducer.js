@@ -28,6 +28,10 @@ export default function application(state = initialState, action){
             break;
         case types.SELECT_APP:
             newState = dotProp.set(newState, 'activeAppId', action.payload.id);
+            newState = updateArrayProperty(newState, 'monitoringApps', 'Id', action.payload.id, 'scrollLogsOnAppSwitch', true);
+            break;
+        case types.SCROLL_LOGS_ON_APP_SWTICH_DONE:
+            newState = updateArrayProperty(newState, 'monitoringApps', 'Id', action.payload.id, 'scrollLogsOnAppSwitch', false);
             break;
         case types.FETCH_LOGS_START:
             newState = updateArrayProperty(newState, 'monitoringApps', 'Id', action.payload.id, 'loading', true);
@@ -50,7 +54,14 @@ export default function application(state = initialState, action){
             newState = updateArrayProperty(newState, 'monitoringApps', 'Id', action.payload.id, 'tail', false);
             break;
         case types.SET_SCROLL_POSITION:
-            newState = updateArrayProperty(newState, 'monitoringApps', 'Id', newState.activeAppId, 'scrollTop', action.payload.top);
+            if(action.payload.view  === 'logs'){
+                newState = updateArrayProperty(newState, 'monitoringApps', 'Id', newState.activeAppId, 'scrollTopLogs', action.payload.top);
+            }
+            else if(action.payload.view  === 'search'){
+                newState = updateArrayProperty(newState, 'monitoringApps', 'Id', newState.activeAppId, 'scrollTopSearch', action.payload.top);
+            }else {
+                console.log("Invalid view to set scroll position");
+            }
             break;
         case types.RESET_SCROLL_POSITION:
             newState = updateArrayProperty(newState, 'monitoringApps', 'Id', newState.activeAppId, 'resetScrollTopValue', action.payload.top);
@@ -59,6 +70,8 @@ export default function application(state = initialState, action){
             break;
         case types.RESET_SCROLL_POSITION_DONE:
             newState = updateArrayProperty(newState, 'monitoringApps', 'Id', newState.activeAppId, 'resetScrollTop', false);
+            newState = updateArrayProperty(newState, 'monitoringApps', 'Id', newState.activeAppId, 'resetScrollTopValue');
+
             break;
         case types.LOGS_MESSAGES:
             newState = dotProp.merge(state, 'logs_' + action.payload.id, action.payload.logs);
@@ -108,8 +121,8 @@ export default function application(state = initialState, action){
             break;
         case types.SELECT_CONTENT_VIEW:
             newState = updateArrayProperty(newState,  'monitoringApps', 'Id', action.payload.id, 'contentViewKey',action.payload.contentViewKey);
-            if(action.payload.contentViewKey == 'logs'){
-                const resetScrollTopValue = getArrayProperty(newState, 'monitoringApps', 'Id', newState.activeAppId, 'scrollTop')
+            if(action.payload.contentViewKey === 'logs'){
+                const resetScrollTopValue = getArrayProperty(newState, 'monitoringApps', 'Id', newState.activeAppId, 'scrollTopLogs')
                 newState = updateArrayProperty(newState, 'monitoringApps', 'Id', newState.activeAppId, 'resetScrollTopValue', resetScrollTopValue);
                 newState = updateArrayProperty(newState, 'monitoringApps', 'Id', newState.activeAppId, 'resetScrollTop', true);
             }
@@ -130,6 +143,9 @@ export default function application(state = initialState, action){
         case types.RESET_APP_DONE:
             newState = dotProp.delete(newState, 'resetApp');
             break;
+        case types.BOOKMARK_LINE:
+            newState = appendArrayProperty(newState,  'monitoringApps', 'Id', action.payload.id, 'highlightedLines',action.payload.line);
+            break;
         default :
         console.log('default: ' + JSON.stringify(action));
     }
@@ -144,6 +160,7 @@ function updateArrayProperty(state, array, filterPropName, filterPropVal, propNa
                 newState = dotProp.set(state, `${array}.${i}.${propName}`,  propValue)
             }else{
                 newState = dotProp.delete(state, `${array}.${i}.${propName}`)
+                console.log("Deleted property " + propName);
             }
            
             //state[array][i][propName] = propValue;
@@ -160,7 +177,7 @@ function appendArrayProperty(state, array, filterPropName, filterPropVal, propNa
     for(var i in state[array]){
         if (state[array][i][filterPropName] === filterPropVal){
             if(propValue){
-                newState = dotProp.set(state, `${array}.${i}.${propName}`, list => [...list, propValue])
+                newState = dotProp.set(state, `${array}.${i}.${propName}`, list => list ? [...list, propValue] :  [propValue])
             }
             break;
         }

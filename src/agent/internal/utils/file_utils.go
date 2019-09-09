@@ -304,9 +304,9 @@ func SearchLogs(directory string, filePattern string, searchQuery SearchQuery)([
 
 	var args []string
 	if(searchQuery.Type == ".*"){
-		args = []string{"-Hn", "--max-count=50", searchQuery.SearchString}
+		args = []string{"-Hni", "--max-count=50", searchQuery.SearchString}
 	}else{
-		args = []string{"-HFn", "--max-count=50", searchQuery.SearchString}
+		args = []string{"-HFni", "--max-count=50", searchQuery.SearchString}
 	}
 	
 	args = append(args, filesToSearch...)

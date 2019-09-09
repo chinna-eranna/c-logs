@@ -28,6 +28,8 @@ export class MonitoringDirSettings extends Component {
         this.handleClearLogs = this.handleClearLogs.bind(this);
         this.handleReset = this.handleReset.bind(this);
         this.handleRemove = this.handleRemove.bind(this);
+        this.handleRemoveNo = this.handleRemoveNo.bind(this);
+        this.handleRemoveYes = this.handleRemoveYes.bind(this);
         this.toggleDisplaySettings = this.toggleDisplaySettings.bind(this);
         this.handleSwitch = this.handleSwitch.bind(this);
         this.search = this.search.bind(this);
@@ -51,6 +53,14 @@ export class MonitoringDirSettings extends Component {
     }
 
     handleRemove(){
+        this.setState({'stopMonitoringApp' : true});
+    }
+
+    handleRemoveNo(){
+        this.setState({'stopMonitoringApp' : false});
+    }
+    handleRemoveYes(){
+        this.setState({'stopMonitoringApp' : false});
         this.props.stopMonitoring(this.props.app.Id);
     }
     handleSwitch(state) {
@@ -214,19 +224,39 @@ export class MonitoringDirSettings extends Component {
             tailEmoji = <div style={{padding:'2px', color:'darkblack'}}>{'🏃'}</div>
         }
 
+        let modalDialog = '';
+        if(this.state.stopMonitoringApp){
+            modalDialog  =  (
+            <Modal show={this.state.stopMonitoringApp} onHide={this.handleRemoveNo} centered>
+            <Modal.Header closeButton>
+            <Modal.Title><div style={{color:'black'}}>Confirmation</div></Modal.Title>
+            </Modal.Header>
+            <Modal.Body><div style={{color:'black'}}>Stop Monitoring Application {this.props.app.Name} ?</div></Modal.Body>
+            <Modal.Footer>
+            <Button variant="danger" size="sm" onClick={this.handleRemoveNo}>
+                No
+            </Button>
+            <Button variant="success" size="sm" onClick={this.handleRemoveYes}>
+                Yes
+            </Button>
+            </Modal.Footer>
+        </Modal>
+            )
+        }
 		return (
             <div>
-            <div>
-                <div >
-                    <div style={{display:'flex', border:'2px solid black', marginTop:'10px',  borderRadius:'.2rem', padding:'2px', cursor:'pointer', background:backgroundColor, color: textColor}}>
-                        <div style={{flexGrow:'1', textAlign:'left'}} onClick={(e) => this.selectLogDir()}>{this.props.app.Name}</div>
-                        {tailEmoji}
-                        <div style={{padding:'2px', color:'darkblack'}} onClick={(e) => this.toggleDisplaySettings()}>{'🛠'}</div>
+                <div>
+                    <div >
+                        <div style={{display:'flex', border:'2px solid black', marginTop:'1.5rem',  borderRadius:'.2rem', padding:'2px', cursor:'pointer', background:backgroundColor, color: textColor}}>
+                            <div style={{flexGrow:'1', textAlign:'left'}} onClick={(e) => this.selectLogDir()}>{this.props.app.Name}</div>
+                            {tailEmoji}
+                            <div style={{padding:'2px', color:'darkblack'}} onClick={(e) => this.toggleDisplaySettings()}>{'🛠'}</div>
+                        </div>
                     </div>
+                    
                 </div>
-                
-            </div>
-            {settingsContent}
+                {settingsContent}
+                {modalDialog}
             </div>
        );
 	}

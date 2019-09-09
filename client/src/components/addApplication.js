@@ -30,6 +30,8 @@ export class AddApplication extends Component {
 		super(props);
 		this.newLogs = 'New Logs';
 		this.allLogs = 'All Logs';
+		this.none = "-None-"
+		this.defaults = { selectApplication: false, selectedApp: this.none, startLogFile:this.newLogs, readFullFileContent:false };
 
 		this.selectApplication = this.selectApplication.bind(this);
 		this.selectLog = this.selectLog.bind(this);
@@ -40,7 +42,7 @@ export class AddApplication extends Component {
 		this.getStartFromContent = this.getStartFromContent.bind(this);
 		this.readFullFileContent = this.readFullFileContent.bind(this);
 		this.handleReadFullFileContent  = this.handleReadFullFileContent.bind(this);
-		this.state = { selectApplication: false, selectedApp: '-None-', startLogFile:this.newLogs, readFullFileContent:false };
+		this.state = this.defaults;
 		
 	}
 	handleAddAppLog() {
@@ -48,7 +50,7 @@ export class AddApplication extends Component {
 		if(this.props.resetApp){
 			this.props.resetAppDone();
 		}
-		if (this.state.selectedApp === '-None-') {
+		if (this.state.selectedApp === this.none) {
 			return;
 		}
 		const appToBeMonitored = this.props.availableApps.filter((app, index) => {
@@ -56,11 +58,14 @@ export class AddApplication extends Component {
 		});
 		
 		this.props.monitorAppLog(appToBeMonitored[0], this.state.startLogFile, this.state.readFullFileContent, reset);
-		this.setState({ selectApplication: false, selectedApp: '-None-', startLogFile:'New Logs'});
+		this.setState(this.defaults);
 	}
 
 	handleCancelAppLog() {
-		this.setState({ selectApplication: false });
+		this.setState(this.defaults);
+		if(this.props.resetApp){
+			this.props.resetAppDone();
+		}
 	}
 
 	handleReadFullFileContent(){
@@ -124,15 +129,20 @@ export class AddApplication extends Component {
 			selectAppContent = (
 				<InputGroup size="sm" className="mb-3">
 					<InputGroup.Prepend>
-						<InputGroup.Text id="basic-addon1">Choose Application</InputGroup.Text>
+						<InputGroup.Text id="basic-addon1">Application</InputGroup.Text>
 					</InputGroup.Prepend>
-					{this.props.resetApp}
+					<DropdownButton disabled="true" size="sm" as={InputGroup.Prepend} variant="outline-secondary"
+					title={this.props.resetApp} id="input-group-dropdown-1" >
+						<div style={{maxHeight:'10em', overflowY:  'scroll'}}>
+						<Dropdown.Item size="sm" eventKey={this.props.resetApp} key={this.props.resetApp}>{this.props.resetApp}</Dropdown.Item>
+						</div>
+					</DropdownButton>
 				</InputGroup>);
 		}else{
 			selectAppContent = (
 				<InputGroup size="sm" className="mb-3">
 					<InputGroup.Prepend>
-						<InputGroup.Text id="basic-addon1">Choose Application</InputGroup.Text>
+						<InputGroup.Text id="basic-addon1">Application</InputGroup.Text>
 					</InputGroup.Prepend>
 					<DropdownButton size="sm" as={InputGroup.Prepend} variant="outline-secondary"
 					title={selectedApp} id="input-group-dropdown-1" onSelect={this.selectApplication} >
@@ -196,6 +206,8 @@ export class AddApplication extends Component {
 		}
 	}
 	render() {
+		const title =  (this.props.resetApp) ? "Reset Monitoring Application" : "Choose Application to view logs";
+		const buttonTitle = (this.props.resetApp) ? "Reset" : "Add";
 		let chooseApplicationContent = (
 			<Modal show={true} onHide={this.handleCancelAppLog}
 				size="lg"
@@ -204,7 +216,7 @@ export class AddApplication extends Component {
 			>
 				<Modal.Header closeButton>
 					<Modal.Title id="contained-modal-title-vcenter">
-						<div style={{color: 'black'}}>Choose Application to view logs</div>
+						<div style={{color: 'black'}}>{title}</div>
           			</Modal.Title>
 				</Modal.Header>
 				<Modal.Body>
@@ -216,7 +228,7 @@ export class AddApplication extends Component {
 				<Modal.Footer>
 					<div style={{ display: 'flex' }}>
 						<Button variant="danger" size="sm" onClick={this.handleCancelAppLog} style={{ marginRight: '10px' }}>Cancel</Button>
-						<Button variant="success" size="sm" onClick={this.handleAddAppLog}>Add</Button>
+						<Button variant="success" size="sm" onClick={this.handleAddAppLog}>{buttonTitle}</Button>
 					</div>
 				</Modal.Footer>
 
@@ -227,7 +239,7 @@ export class AddApplication extends Component {
 		if (this.state.selectApplication) {
 			addAppContent = chooseApplicationContent;
 		} else {
-			addAppContent = (<Button variant="warning" size="sm" onClick={this.addApplication}>Add Application</Button>);
+			addAppContent = (<Button variant="warning" size="sm" onClick={this.addApplication}>Choose Application</Button>);
 		}
 
 		return addAppContent;
