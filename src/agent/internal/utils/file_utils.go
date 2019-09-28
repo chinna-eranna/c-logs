@@ -30,6 +30,11 @@ type GetFilesResponse struct{
 }
 
 func EnsureAppHomeDir(){
+	homeDirFromEnv, ok := os.LookupEnv("CLOGS_HOME")
+	if ok {
+		log.Info("Home directory of user ", homeDirFromEnv)
+		return
+	}
 	homeDir, _ := homedir.Dir()
 	log.Info("Home directory of user ", homeDir)
 	appDir := filepath.Join(homeDir, ".c-logs")
@@ -37,6 +42,10 @@ func EnsureAppHomeDir(){
 }
 
 func GetAppHomeDir()(string){
+	homeDirFromEnv, ok := os.LookupEnv("CLOGS_HOME")
+	if ok {
+		return homeDirFromEnv
+	}
 	homeDir, _ := homedir.Dir()
 	appDir := filepath.Join(homeDir, ".c-logs")
 	return appDir

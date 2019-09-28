@@ -4,6 +4,7 @@ import { connect } from 'react-redux';
 import Tabs from 'react-bootstrap/Tabs'
 import Tab from 'react-bootstrap/Tab'
 import LogsViewer  from './logsViewer';
+import LogSettings from './logSettings';
 import SearchResults from './searchResults';
 import * as types from '../actions/actionTypes';
 
@@ -50,26 +51,49 @@ export class ContentViewer extends Component {
 	}
 
 	render() {
+		let logSettingsContent ='';
+		if (this.props.activeMonitoringApp.length > 0 && this.props.activeMonitoringApp[0].logsCount !== undefined){
+			const viewType = this.props.activeMonitoringApp[0].contentViewKey ? this.props.activeMonitoringApp[0].contentViewKey : 'logs';
+			logSettingsContent  = (<LogSettings app={this.props.activeMonitoringApp[0]}  logsCount={this.props.activeMonitoringApp[0].logsCount} view={viewType}/>)
+		}
 		if (this.props.activeMonitoringApp.length > 0 && 
 			((this.props.activeMonitoringApp[0].searchResults && this.props.activeMonitoringApp[0].searchResults.length >= 0) || this.props.activeMonitoringApp[0].searchInProgress)) {
 			return (
 				<div style={{height:'100vh', border:'2px solid black'}}>
                 <Tabs id="content-viewer" activeKey={this.props.activeMonitoringApp[0].contentViewKey} onSelect={key => this.selectView(key)} >
                     <Tab eventKey="logs" title="Logs">
-						<div ref="elem" id="logsDiv" onScroll={ this.onScrollLogs }  style={{height:'95vh', overflow:'auto'}}>
-							<LogsViewer logs={this.props.logs} activeMonitoringApp={this.props.activeMonitoringApp}/>
+						<div style={{height: '95vh', display: 'flex', flexDirection: 'column'}}>
+							<div>
+							<LogSettings app={this.props.activeMonitoringApp[0]}  logsCount={this.props.activeMonitoringApp[0].logsCount} view="logs"/>
+							</div>
+							<div ref="elem" id="logsDiv" onScroll={ this.onScrollLogs }  style={{flexGrow: '1', overflow:'auto'}}>
+								<LogsViewer logs={this.props.logs} activeMonitoringApp={this.props.activeMonitoringApp}/>
+							</div>
 						</div>
-                    </Tab>
+			        </Tab>
                     <Tab eventKey="searchResults" title="Search Results">
-					<div ref="searchElem" onScroll={ this.onScrollSearch }  style={{height:'95vh', overflow:'auto'}}>
-                        <SearchResults activeMonitoringApp={this.props.activeMonitoringApp[0]}/>
+					<div style={{height: '95vh', display: 'flex', flexDirection: 'column'}}>
+							<div>
+							<LogSettings app={this.props.activeMonitoringApp[0]}  logsCount={this.props.activeMonitoringApp[0].logsCount} view="searchResults"/>
+							</div>
+						<div ref="searchElem" onScroll={ this.onScrollSearch }  style={{flexGrow: '1', overflow:'auto'}}>
+							<SearchResults activeMonitoringApp={this.props.activeMonitoringApp[0]} />
+						</div>
 					</div>
                     </Tab>
                 </Tabs>
 				</div>
 			);
 		} else{
-			return ( <div ref="elem" onScroll={ this.onScrollLogs } style={{height:'100vh',overflow:'auto', border:'2px solid black'}}><LogsViewer logs={this.props.logs} activeMonitoringApp={this.props.activeMonitoringApp}/></div>);
+			return ( <div style={{height:'100vh', display: 'flex', flexDirection: 'column', border:'2px solid black'}}>
+				<div>{
+					logSettingsContent
+				}
+				</div>
+				<div ref="elem" id="logsDiv" onScroll={ this.onScrollLogs }  style={{flexGrow: '1', overflow:'auto'}}>
+					<LogsViewer logs={this.props.logs} activeMonitoringApp={this.props.activeMonitoringApp}/>
+				</div>
+			</div>);
 		}
 	}
 }

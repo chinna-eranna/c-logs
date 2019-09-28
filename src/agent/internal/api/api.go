@@ -5,19 +5,19 @@ import (
     "net/http"
 	"github.com/gorilla/mux"
 	"fmt"
-	//"os"
+	"os"
 	"io/ioutil"
 	"encoding/json"
 	"strconv"
-	//"time"
-	//"path/filepath"
+	"time"
+	"path/filepath"
 	"agent/internal/logs"
 	"agent/internal/utils"
 	"github.com/gobuffalo/packr"
 )
 
 func Init(box packr.Box) {
-	/*
+	
 	appHomeDir := utils.GetAppHomeDir()
 	f, err := os.OpenFile(filepath.Join(appHomeDir, "/clogs.log_" + time.Now().Format(time.RFC3339) ), os.O_APPEND | os.O_CREATE | os.O_RDWR, 0666)
     if err != nil {
@@ -28,8 +28,9 @@ func Init(box packr.Box) {
 		FullTimestamp: true,
 	})
 	log.SetOutput(f)
+	log.SetLevel(log.WarnLevel)
 	
-	*/
+	
 	log.Println("Initializing API router")
 	router := mux.NewRouter()
 	router.HandleFunc("/", http.FileServer(box).ServeHTTP).Methods("GET")

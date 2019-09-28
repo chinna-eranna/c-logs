@@ -85,6 +85,7 @@ export default function application(state = initialState, action){
         case types.CLEAR_LOGS:
             newState = dotProp.set(newState, 'logs_' + action.payload.id, []);
             newState = updateArrayProperty(newState,  'monitoringApps', 'Id', action.payload.id, 'logsCount',0);
+            newState = updateArrayProperty(newState, 'monitoringApps', 'Id', action.payload.id, 'highlightedLines', []);
             break;
         case types.TOGGLE_DISPLAY_SETTINGS:
             newState = updateArrayProperty(newState, 'monitoringApps', 'Id', action.payload.id, 'displaySettings', action.payload.displaySettings);
@@ -99,21 +100,37 @@ export default function application(state = initialState, action){
         case types.SET_SEARCH_TEXT:
             newState = updateArrayProperty(newState, 'monitoringApps', 'Id', action.payload.id, 'searchText', action.payload.searchText);
             break;
-        case types.SEARCH_RESULTS_INPROGRESS:
-            newState = updateArrayProperty(newState,  'monitoringApps', 'Id', action.payload.id, 'contentViewKey','searchResults');
-            newState = updateArrayProperty(newState,  'monitoringApps', 'Id', action.payload.id, 'searchInProgress',true);
-            newState = updateArrayProperty(newState,  'monitoringApps', 'Id', action.payload.id, 'searchResults', []);
+        case types.SEARCH_START:
+                newState = updateArrayProperty(newState,  'monitoringApps', 'Id', action.payload.id, 'contentViewKey','searchResults');
+                newState = updateArrayProperty(newState,  'monitoringApps', 'Id', action.payload.id, 'searchInProgress',true);
+                newState = updateArrayProperty(newState,  'monitoringApps', 'Id', action.payload.id, 'searchResults', []);
+                break;
+        case types.SEARCH_STOP:
+                stopSearch();
+                break;
+        case types.FILES_TO_SEARCH:
+            newState = updateArrayProperty(newState,  'monitoringApps', 'Id', action.payload.id, 'filesToSearch', action.payload.filesToSearch);
+            newState = updateArrayProperty(newState,  'monitoringApps', 'Id', action.payload.id, 'nextFileToSearch', 0);
             break;
         case types.APPEND_SEARCH_RESULTS:
+            //dont even append if user requested for search stop
+            let searchInProgress = getArrayProperty(newState,  'monitoringApps', 'Id', action.payload.id, 'searchInProgress');
+            if(!searchInProgress){
+                return newState;
+            }
+            
+            //update search results
             let searchResults = getArrayProperty(newState,  'monitoringApps', 'Id', action.payload.id, 'searchResults');
             searchResults = searchResults.concat(action.payload.searchResults.reverse());
             newState = updateArrayProperty(newState,  'monitoringApps', 'Id', action.payload.id, 'searchResults', searchResults);
-            newState = updateArrayProperty(newState,  'monitoringApps', 'Id', action.payload.id, 'searchInProgress', false);
-           /*
-            if(!action.payload.searchResults || action.payload.searchResults.length == 0){
-                newState = updateArrayProperty(newState,  'monitoringApps', 'Id', action.payload.id, 'searchResults', [{Name: "", Line: "", Text:"No Results"}]);
+            
+            //update next file search properties
+            let nextFileToSearch = getArrayProperty(newState,  'monitoringApps', 'Id', action.payload.id, 'nextFileToSearch');
+            let filesToSearch = getArrayProperty(newState,  'monitoringApps', 'Id', action.payload.id, 'filesToSearch');
+            if(nextFileToSearch + 1 >= filesToSearch.length){
+                stopSearch();
             }
-            */
+            newState = updateArrayProperty(newState,  'monitoringApps', 'Id', action.payload.id, 'nextFileToSearch', nextFileToSearch + 1);
             break;
         case types.SCROLL_TO_LINE:
             newState = updateArrayProperty(newState,  'monitoringApps', 'Id', action.payload.id, 'scrollToLine',action.payload.scrollToLine);
@@ -146,17 +163,27 @@ export default function application(state = initialState, action){
         case types.BOOKMARK_LINE:
             newState = appendArrayProperty(newState,  'monitoringApps', 'Id', action.payload.id, 'highlightedLines',action.payload.line);
             break;
+        case types.SET_CURRENT_SEARCH_CURSOR:
+            newState = updateArrayProperty(newState, 'monitoringApps', 'Id', action.payload.id, 'searchCursor', action.payload.searchCursor);
+            break;
         default :
         console.log('default: ' + JSON.stringify(action));
     }
     return newState;
+
+    function stopSearch() {
+        newState = updateArrayProperty(newState, 'monitoringApps', 'Id', action.payload.id, 'searchInProgress', false);
+        newState = updateArrayProperty(newState, 'monitoringApps', 'Id', action.payload.id, 'filesToSearch');
+        newState = updateArrayProperty(newState, 'monitoringApps', 'Id', action.payload.id, 'nextFileToSearch');
+    }
 }
 
 function updateArrayProperty(state, array, filterPropName, filterPropVal, propName, propValue ){
+    console.log("Updating  property: "  + propName);
     var newState = state;
     for(var i in state[array]){
         if (state[array][i][filterPropName] === filterPropVal){
-            if(propValue){
+            if(propValue || typeof propValue === 'number'){
                 newState = dotProp.set(state, `${array}.${i}.${propName}`,  propValue)
             }else{
                 newState = dotProp.delete(state, `${array}.${i}.${propName}`)

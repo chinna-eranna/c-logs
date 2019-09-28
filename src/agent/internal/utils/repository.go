@@ -21,7 +21,7 @@ func GetAll()([]LogDirectory){
 	appHomeDir := GetAppHomeDir()
 	log.Info("AppHomeDirectory:", appHomeDir);
 	
-	logDirRepoContent, err := ioutil.ReadFile(filepath.Join(appHomeDir, "log_dir_repo.txt"))
+	logDirRepoContent, err := ioutil.ReadFile(filepath.Join(appHomeDir, "clogs.conf"))
 	if err != nil{
 		log.Error("Error while opening the log_dir_repo file ", err)
 	}
@@ -99,7 +99,7 @@ func saveLogDirRepository(logDirectories []LogDirectory)(error){
 		return err
 	}
 	appHomeDir := GetAppHomeDir()
-	err = ioutil.WriteFile(filepath.Join(appHomeDir, "log_dir_repo.txt"), logDirRepoContent, 0644)
+	err = ioutil.WriteFile(filepath.Join(appHomeDir, "clogs.conf"), logDirRepoContent, 0644)
 	if err != nil {
 		log.Error("Unable to write the log directory repo content", err)
 		return err

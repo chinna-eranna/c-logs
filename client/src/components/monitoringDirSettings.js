@@ -13,7 +13,8 @@ import InputGroup from 'react-bootstrap/InputGroup'
 import FormControl from 'react-bootstrap/FormControl'
 import Dropdown from 'react-bootstrap/Dropdown'
 import DropdownButton from 'react-bootstrap/DropdownButton'
-
+import Tooltip from 'react-bootstrap/Tooltip'
+import OverlayTrigger from 'react-bootstrap/OverlayTrigger'
 
 import * as types from '../actions/actionTypes';
 import Switch from "react-switch";
@@ -247,16 +248,14 @@ export class MonitoringDirSettings extends Component {
             <div>
                 <div>
                     <div >
-                        <div style={{display:'flex', border:'2px solid black', marginTop:'1.5rem',  borderRadius:'.2rem', padding:'2px', cursor:'pointer', background:backgroundColor, color: textColor}}>
-                            <div style={{flexGrow:'1', textAlign:'left'}} onClick={(e) => this.selectLogDir()}>{this.props.app.Name}</div>
+                    <OverlayTrigger overlay={<Tooltip id="tooltip-disabled">{this.props.app.Name}</Tooltip>}>
+                        <div style={{display:'flex', border:'2px solid black', marginTop:'0.5rem',  borderRadius:'.2rem', padding:'2px', cursor:'pointer', background:backgroundColor, color: textColor, fontSize:'.875rem'}}>
+                            <div style={{flexGrow:'1', textAlign:'left', width:'100%', overflow:'hidden', textOverflow:'ellipsis'}} onClick={(e) => this.selectLogDir()}>{this.props.app.Name}</div>
                             {tailEmoji}
-                            <div style={{padding:'2px', color:'darkblack'}} onClick={(e) => this.toggleDisplaySettings()}>{'🛠'}</div>
                         </div>
+                        </OverlayTrigger>
                     </div>
-                    
                 </div>
-                {settingsContent}
-                {modalDialog}
             </div>
        );
 	}

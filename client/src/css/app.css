@@ -1,0 +1,66 @@
+.searchInProgress{
+  margin: 0 5px 0 5px;
+  display:flex;
+}
+.loader {
+  border: 0.2rem solid #f3f3f3;
+  border-radius: 50%;
+  border-top: 2px solid #3498db;
+  width: 1.7rem;
+  height: 1.7rem;
+  -webkit-animation: spin 2s linear infinite; /* Safari */
+  animation: spin 2s linear infinite;
+}
+
+/* Safari */
+@-webkit-keyframes spin {
+  0% { -webkit-transform: rotate(0deg); }
+  100% { -webkit-transform: rotate(360deg); }
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+.dropdown-menu {
+    height: 70px;
+    overflow-y: scroll;
+  }
+
+.logLine{
+  word-wrap: break-word;
+  background-color: #6d6d6d;
+  padding-top: 0.2em;
+  font-size:0.85em;
+  font-family: Verdana;
+  color: white
+}
+.highlightLine{
+  background-color: #ffc107;
+  color:black;
+  word-wrap: break-word;
+  padding-top: 0.2em;
+  font-size:0.85em;
+  font-family: Verdana;
+}
+.logLine:hover{
+  background-color: lightgray;
+  color:black
+}
+
+.logLineParent{
+  display: flex;
+}
+
+.logLineActions{
+  display: none;
+}
+
+.logLineParent:hover .logLineActions{
+  display: inline;
+}
+
+.confirmDialog{
+  color:black
+}

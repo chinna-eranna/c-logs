@@ -19,26 +19,26 @@ ReactDOM.render(
 <Provider store={store}>
     <div class="container-fluid">
         <div className="row">
-            <div className="col col-lg-2" style={{border:'2px solid black', height:'100vh', overflow:'auto'}}>
+            <div className="col col-lg-1" style={{border:'2px solid black', height:'100vh'}}>
                 <div className="row">
-                    <div className="col">
-                        <div class="container-fluid">
+                    <div style={{paddingLeft:'5px', paddingRight:'5px', width:'100%'}}>
+                        <div style={{paddingTop:'1.0rem'}}>
                            
                             <div style={{fontFamily:'cursive', textAlign:'center'}}>
-                                <h1>C-Logs</h1>
+                                <h2>C-Logs</h2>
                             </div>
                         </div>
                     </div>
                 </div>
                     
                 <div className="row">
-                    <div className="col">
+                    <div style={{paddingLeft:'5px', paddingRight:'5px', width:'100%'}}>
                         <MonitoringAppLogList/>
                     </div>
                 </div>
                 
             </div>
-            <div className="col col-lg-10">
+            <div className="col col-lg-11">
                 <ContentViewer/>
             </div>
         </div>

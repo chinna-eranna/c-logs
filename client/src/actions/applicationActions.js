@@ -60,17 +60,39 @@ export function monitorAppLog(app, startLogFile, fullContent, reset){
     }
 }
 
+export function searchInFile(app, nextFileIndex, searchStrType){
+    return dispatch =>  {
+        if(!app.searchInProgress){
+            console.log("searchInProgress is stopped");
+            return;
+        }
+        console.log("Got action to search with  index: " + nextFileIndex);
+        const fileName = app.filesToSearch[nextFileIndex].Name;
+        console.log("Got action to search in file: " + fileName);
+        searchInApp(app.Id, app.searchText, searchStrType, [fileName]).then(function(response){
+            dispatch({type: types.APPEND_SEARCH_RESULTS, payload: {id: app.Id, searchResults: response.data}});
+        }, function(err){
+            console.log("Error in the search request ", err);
+            dispatch({type: types.APPEND_SEARCH_RESULTS, payload: {id: app.Id, searchResults: err.response.data}});
+        });
+    };
+}
+
 export function search(app, searchStrType) {
     return dispatch => {
         console.log("Starting search for app ", app.Name, " with search text ", app.searchText);
-        dispatch({type: types.SEARCH_RESULTS_INPROGRESS, payload: {id: app.Id}});
+        dispatch({type: types.SEARCH_START, payload: {id: app.Id, 'searchProgress': true}});
         getFiles(app.Directory, app.LogFilePattern).then(function(response){
             if(response && response.data && response.data != null && response.data.length > 0){
                 const sortedFileList = _.sortBy(response.data, function(o) { return o.LastModified * -1; });
-                _async.mapLimit(sortedFileList, 1, (file, test) => {
+                dispatch({type: types.FILES_TO_SEARCH, payload: {id: app.Id, 'filesToSearch': sortedFileList}});
+                /*
+                _async.mapLimit(sortedFileList, 1, (file, asyncCallback) => {
                     searchInApp(app.Id, app.searchText, searchStrType, [file.Name]).then(function(response){
                         dispatch({type: types.APPEND_SEARCH_RESULTS, payload: {id: app.Id, searchResults: response.data}});
-                        test(null, response.data);
+                        setTimeout(() => {
+                            asyncCallback(null, response.data);
+                        }, 2000);
                     }, function(err){
                         console.log("Error in the search request ", err);
                         dispatch({type: types.APPEND_SEARCH_RESULTS, payload: {id: app.Id, searchResults: err.response.data}});
@@ -78,10 +100,11 @@ export function search(app, searchStrType) {
                     
                 }, (error, results) => {
                     console.log("Result is invoked, ", results);
-                })
-
+                    dispatch({type: types.SEARCH_STOP, payload: {id: app.Id}});  
+                });*/
             }else{
                 console.log("No Files to search for");
+                dispatch({type: types.SEARCH_STOP, payload: {id: app.Id}});
             }
         });
     }
@@ -94,8 +117,9 @@ export function getMoreLogs(app){
     }
 }
 
-export function reset(app, file, lineNumber){
+export function reset(app, file, lineNumber, searchCursor){
     return dispatch => {
+        dispatch({type: types.SET_CURRENT_SEARCH_CURSOR, payload: {id: app.Id, searchCursor: searchCursor}})
         var adjustedLineNumberToLoad = lineNumber > 100 ? lineNumber - 100 : 1;
         var adjustedLineNumberToScroll = lineNumber > 100 ? 100 : parseInt(lineNumber);
         resetMonitoring(app.Id, file, adjustedLineNumberToLoad).then(function(response){
@@ -109,6 +133,23 @@ export function reset(app, file, lineNumber){
             console.log("Error while reset monitoring - ", err);
         });
     }
+}
+
+export function moveSearchCursor(app, cursor){
+    const searchResults = app.searchResults;
+    if(!searchResults || searchResults.length == 0){
+        console.log("Invalid searchResults for reset");
+        return;
+    }
+    if(cursor < 0 || cursor >= searchResults.length) {
+        console.log("Invalid search cursor for reset");
+        return;
+    }
+
+    const result = searchResults[cursor];
+    const file = result.Name.slice(result.Name.lastIndexOf("/") + 1);
+    const lineNumber = result.Line;
+    return reset(app, file, lineNumber, cursor);
 }
 
 export function fetchFiles(directory, filePattern){

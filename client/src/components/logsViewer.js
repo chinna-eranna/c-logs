@@ -57,6 +57,9 @@ export class LogsViewer extends Component {
 	}
 
 	componentDidUpdate(){
+		if(this.props.activeMonitoringApp && this.props.activeMonitoringApp.length && this.props.activeMonitoringApp[0].contentViewKey !== 'logs'){
+			return;
+		}
 		console.log("ScrollToLine: this.startAfterSearch - " + this.startAfterSearch);
 		console.log("ScrollToLine: this.startAfterSearch.current - " + this.startAfterSearch.current);
 

@@ -33,5 +33,6 @@ export default {
     monitoringApps: [],
     host: '',
     logs:[],
+    highlightedLines:[],
     filesList:[]
 }
