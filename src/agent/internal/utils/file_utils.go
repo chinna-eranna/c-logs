@@ -1,7 +1,7 @@
 package utils
 
 import (
-	"github.com/rjeczalik/notify"
+	//"github.com/rjeczalik/notify"
 	log "github.com/Sirupsen/logrus"
 	"github.com/mitchellh/go-homedir"
 	"io"
@@ -10,7 +10,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"path/filepath"
-	"time"
+//	"time"
 	"math"
 	"errors"
 	"regexp"
@@ -145,7 +145,7 @@ func findFile(dir string, filePattern string, kind string)(string, error){
 }
 
 func GunzipFile(gzFilePath, dstFilePath string) (int64, error) {
-	
+	/* - commenting this block as it seems to be not required
 	gzFileCh := make(chan notify.EventInfo, 10)
 	if err := notify.Watch(gzFilePath, gzFileCh, notify.InModify); err != nil {
 		log.Info("Error while watching for modify event for gz file ", gzFilePath)
@@ -163,7 +163,7 @@ func GunzipFile(gzFilePath, dstFilePath string) (int64, error) {
 			log.Info("Gzip file creation complete")
 		}
 	}
-
+	*/
 	log.Info("Uncompress file ", gzFilePath, " to ", dstFilePath);
     gzFile, err := os.Open(gzFilePath)
     if err != nil {
@@ -328,7 +328,7 @@ func SearchLogs(directory string, filePattern string, searchQuery SearchQuery)([
 	output := out.String();
 	errOutput := stderr.String()
 
-	log.Info("SearchLogs Output: " + output );
+	log.Debug("SearchLogs Output: " + output );
 	log.Info("SearchLogs errOutput: " + errOutput );
 	log.Info("SearchLogs err: " + fmt.Sprint(err) );
 

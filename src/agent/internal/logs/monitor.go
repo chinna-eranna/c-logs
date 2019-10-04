@@ -2,9 +2,8 @@ package logs
 
 
 import (
-	"github.com/rjeczalik/notify"
+	"github.com/fsnotify/fsnotify"
 	log "github.com/Sirupsen/logrus"
-	"golang.org/x/sys/unix"
 	"strings"
 	"path/filepath"
 	"os"
@@ -289,6 +288,35 @@ func (monitoringLogFile *MonitoringLogFile) switchToCompressedFile()(*os.File, e
 */
 
 func (monitoringLogFile *MonitoringLogFile) monitorDir(){
+	watcher, err := fsnotify.NewWatcher()
+	if err != nil {
+		log.Fatal("Error creating a new watcher", err)
+	}
+	defer watcher.Close()
+	err = watcher.Add(monitoringLogFile.Directory)
+	if err != nil {
+		log.Fatal("Error while watching the directory", err)
+	}
+
+	for {
+        select {
+        case event, ok := <-watcher.Events:
+            if !ok {
+                return
+            }
+			log.Info("FSEvent in watcher:", event)
+			monitoringLogFile.handleDirChangeNotification(event);
+        case err, ok := <-watcher.Errors:
+            if !ok {
+                return
+            }
+            log.Error("Error while watching the directory - ",monitoringLogFile.Directory, err)
+		case <- monitoringLogFile.quitCh:
+			log.Warn("Routine asked to quit");
+			return
+		}
+    }
+/*
 	dirMonitorCh := make(chan notify.EventInfo, 10)
 	if err := notify.Watch(monitoringLogFile.Directory, dirMonitorCh, notify.Create, notify.Remove, notify.InMovedFrom, notify.InMovedTo); err != nil {
 		log.Info("Error while watching for create/remove/rename event for directory ", monitoringLogFile.Directory)
@@ -306,49 +334,28 @@ func (monitoringLogFile *MonitoringLogFile) monitorDir(){
 			monitoringLogFile.handleDirChangeNotification(ei)
 		}
 	}
+	*/
 }
 
-func (monitoringLogFile *MonitoringLogFile) handleDirChangeNotification(ei notify.EventInfo){
-	moves := make(map[uint32]struct{
-		From string
-		To string
-	})
-	
-	switch ei.Event(){
-	case notify.Create:
-		log.Info("Directory Change Notification - Created file : ", ei.Path())
-		dirName,fileName := filepath.Split(ei.Path())
+func (monitoringLogFile *MonitoringLogFile) handleDirChangeNotification(event fsnotify.Event){
+	switch event.Op{
+	case fsnotify.Create:
+		log.Info("Directory Change Notification - Created file : ", event.Name)
+		fileName := event.Name
 		if strings.HasSuffix(fileName, ".gz") {
 			if  monitoringLogFile.CompressedFile {
 				return;
 			}
-			log.Info("Got compressed file ", filepath.Join(dirName, fileName))
-			//uncompressedFilePath := filepath.Join(utils.GetAppHomeDir(), strings.TrimSuffix(fileName, ".gz"))
-			//utils.GunzipFile(ei.Path(), uncompressedFilePath)
+			log.Info("Got compressed file ", filepath.Join(monitoringLogFile.Directory, fileName))
+			//TODO Before setting compressedFile to true, need to check if the fileName matches the pattern
 			monitoringLogFile.CompressedFile = true
 			monitoringLogFile.FileName = fileName
 		}
 		
-	case notify.Remove:
-		log.Info("Removed: ", ei.Path())
-	case notify.InMovedFrom:
-		fallthrough
-	case notify.InMovedTo:
-		cookie := ei.Sys().(*unix.InotifyEvent).Cookie
-		info := moves[cookie]
-		if ei.Event() == notify.InMovedFrom{
-			info.From = ei.Path()
-		}else{
-			info.To = ei.Path()
-		}
-		moves[cookie] = info
-		if info.From != "" && info.To != ""{
-			log.Info("Renamed: " , info.From + " -> ", info.To)
-			delete(moves, cookie)
-			_,fileRenamed := filepath.Split(ei.Path())
-			if strings.Index(fileRenamed, "dummy") >= 0{
-				log.Info("Renamed file matched with watching log pattern")
-			}
-		}
+	case fsnotify.Remove:
+		log.Info("Directory Change Notification - Removed file: ", event.Name)
+	case fsnotify.Rename:
+		log.Info("Directory Change Notification - Removed file: ", event.Name)
+		
 	}
 }
