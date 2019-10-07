@@ -46,12 +46,6 @@ var Files map[int]*MonitoringLogFile
 func Init(){
 	utils.EnsureAppHomeDir()
 	Files = make(map[int]*MonitoringLogFile)
-	/*
-	_,err := MonitorLogPath("/test/file")
-	if(err != nil){
-		log.Fatal("Could not monitor logpath")
-	}
-	*/
 }
 
 func MonitorLogPath(logDirectory utils.LogDirectory, startMonitoringReq StartMonitoringRequest) (MonitoringLogFile, error){
@@ -129,16 +123,6 @@ func (monitoringLogFile *MonitoringLogFile) readLogFile(){
 			monitoringLogFile.Offset = 0;
 		}
 	
-		/*
-		if monitoringLogFile.CompressedFile {
-			absFilepath = monitoringLogFile.CompressedFile
-			monitoringLogFile.FileName = monitoringLogFile.CompressedFile
-			monitoringLogFile.CompressedFile = ""
-		}else{
-			absFilepath = filepath.Join(monitoringLogFile.Directory, monitoringLogFile.FileName)
-			monitoringLogFile.Offset = 0;
-		}*/
-
 		log.Info("Start reading and buffering log file ", absFilepath)
 		
 		file,err := os.Open(absFilepath)
@@ -266,28 +250,6 @@ func (monitoringLogFile *MonitoringLogFile) waitForConsuming(){
 		log.Info("Lines available After consuming ", monitoringLogFile.LinesProduced)
 	}
 }
-/*
-func (monitoringLogFile *MonitoringLogFile) switchToCompressedFile()(*os.File, error){
-	log.Info("Opening Compressed file now")
-	file,err := os.Open(monitoringLogFile.CompressedFile)
-	if err != nil {
-		log.Info("Got error while opening the compressed file ", monitoringLogFile.CompressedFile, err)
-		monitoringLogFile.quitCh <- "quit"
-		return nil,err
-	}
-	reader := bufio.NewReader(file)
-	log.Info("Discarding ", monitoringLogFile.Offset, " bytes from compressed file")
-	discarded,err  := reader.Discard(monitoringLogFile.Offset)
-	if err != nil{
-		log.Info("Could not seek into the compressed file ", monitoringLogFile.CompressedFile)
-		monitoringLogFile.quitCh <- "quit"
-		defer file.Close()
-		return nil,err
-	}
-	log.Info("Succeessfully discarded bytes ", discarded, " from ", monitoringLogFile.CompressedFile)
-	return file, nil
-}
-*/
 
 func (monitoringLogFile *MonitoringLogFile) monitorDir(){
 	watcher, err := fsnotify.NewWatcher()
@@ -318,25 +280,6 @@ func (monitoringLogFile *MonitoringLogFile) monitorDir(){
 			return
 		}
     }
-/*
-	dirMonitorCh := make(chan notify.EventInfo, 10)
-	if err := notify.Watch(monitoringLogFile.Directory, dirMonitorCh, notify.Create, notify.Remove, notify.InMovedFrom, notify.InMovedTo); err != nil {
-		log.Info("Error while watching for create/remove/rename event for directory ", monitoringLogFile.Directory)
-	}else{
-		log.Info("Watching  directory: ", monitoringLogFile.Directory);
-	}
-	
-	for{
-		var ei notify.EventInfo
-		select {
-		case <- monitoringLogFile.quitCh:
-			log.Warn("Routine asked to quit");
-			return
-		case ei = <- dirMonitorCh:
-			monitoringLogFile.handleDirChangeNotification(ei)
-		}
-	}
-	*/
 }
 
 func (monitoringLogFile *MonitoringLogFile) handleDirChangeNotification(event fsnotify.Event){
