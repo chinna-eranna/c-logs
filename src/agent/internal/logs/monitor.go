@@ -96,12 +96,13 @@ func (monitoringLogFile *MonitoringLogFile) ResetMonitoring(resetReq ResetReques
 		log.Error("Request file ",resetReq.FileName," doesn't exist in monitoring directory ", monitoringLogFile.Directory)
 		return false
 	}
-
+	log.Info("Entered reset request for ", resetReq)
 	monitoringLogFile.reset = true
 	monitoringLogFile.FileName = resetReq.FileName
 	monitoringLogFile.resetLineNumber = resetReq.LineNumber
 	monitoringLogFile.LinesConsumed <- monitoringLogFile.LinesProduced
 	monitoringLogFile.Lines = make(chan string, 1000)
+	log.Info("monitoringLogFile:",monitoringLogFile);
 	return true
 }
 
@@ -176,6 +177,7 @@ func (monitoringLogFile *MonitoringLogFile) readLogFile(){
 				return 
 			}
 		}
+		linesCh := monitoringLogFile.Lines
 		for{
 			if monitoringLogFile.reset {
 				log.Info("Reset is set, hence resetting the monitoring")
@@ -220,7 +222,7 @@ func (monitoringLogFile *MonitoringLogFile) readLogFile(){
 					}
 				}
 			}else{
-				monitoringLogFile.addLine(bytes)
+				monitoringLogFile.addLine(bytes, linesCh)
 				monitoringLogFile.waitForConsuming()
 			}
 			
@@ -247,9 +249,9 @@ func (monitoringLogFile *MonitoringLogFile) GetLogs() []string{
 	return linesRead
 }
 
-func (monitoringLogFile *MonitoringLogFile) addLine(bytes []byte){
+func (monitoringLogFile *MonitoringLogFile) addLine(bytes []byte, linesCh chan string){
 	if len(bytes) > 0{
-		monitoringLogFile.Lines <- string(bytes)
+		linesCh <- string(bytes)
 		monitoringLogFile.Offset += int64(len(bytes))
 		monitoringLogFile.LinesProduced += 1
 	}
