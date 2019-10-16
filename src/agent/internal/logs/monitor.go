@@ -17,13 +17,9 @@ type MonitoringLogFile struct{
 	Directory string
 	FilePattern string
 	FileName string
-	Lines chan string
 	Offset int64
 
 	CompressedFile bool
-
-	LinesConsumed chan int64
-	LinesProduced int64
 
 	quitCh chan string
 	reset bool
@@ -31,9 +27,18 @@ type MonitoringLogFile struct{
 	start bool
 	nextFile bool
 
+	//
+
+	fwdLogLinesRead LogLinesRead
 	//backwards variables
-	//backwardsPointersCh chan BackwardsFilePointer
-	//backwardsLines chan string
+	backwardsPointersCh chan BackwardsFilePointer
+	//BackwardsLines chan string
+}
+
+type LogLinesRead struct{
+	Lines chan string
+	LinesConsumed chan int64
+	LinesProduced int64
 }
 
 type BackwardsFilePointer struct {
@@ -67,9 +72,9 @@ func NewMonitoringLogFile(logDirectory utils.LogDirectory, startFile string, off
 	monitoringLogFile.Directory = logDirectory.Directory
 	monitoringLogFile.FilePattern = logDirectory.LogFilePattern
 	monitoringLogFile.FileName  = startFile
-	monitoringLogFile.Lines = linesReadCh
+	monitoringLogFile.fwdLogLinesRead = LogLinesRead{linesReadCh, linesConsumeTracker, 0}
+	monitoringLogFile.backwardsPointersCh  = make(chan BackwardsFilePointer, 1000)
 	monitoringLogFile.Offset = offset
-	monitoringLogFile.LinesConsumed = linesConsumeTracker
 	monitoringLogFile.quitCh = quitCh
 	monitoringLogFile.start = true
 
@@ -121,8 +126,8 @@ func (monitoringLogFile *MonitoringLogFile) ResetMonitoring(resetReq ResetReques
 	monitoringLogFile.reset = true
 	monitoringLogFile.FileName = resetReq.FileName
 	monitoringLogFile.resetLineNumber = resetReq.LineNumber
-	monitoringLogFile.LinesConsumed <- monitoringLogFile.LinesProduced
-	monitoringLogFile.Lines = make(chan string, 1000)
+	monitoringLogFile.fwdLogLinesRead.LinesConsumed <- monitoringLogFile.fwdLogLinesRead.LinesProduced
+	monitoringLogFile.fwdLogLinesRead.Lines = make(chan string, 1000)
 	log.Info("monitoringLogFile:",monitoringLogFile);
 	return true
 }
@@ -199,7 +204,7 @@ func (monitoringLogFile *MonitoringLogFile) handleResetForwards(reader *bufio.Re
 }
 
 func (monitoringLogFile *MonitoringLogFile) startReadingForwards(reader *bufio.Reader) {
-	linesCh := monitoringLogFile.Lines
+	linesCh := monitoringLogFile.fwdLogLinesRead.Lines
 	for{
 		if monitoringLogFile.reset {
 			log.Info("Reset is set, hence resetting the monitoring forwards")
@@ -273,7 +278,7 @@ func (monitoringLogFile *MonitoringLogFile) GetLogs() []string{
 	var timeout bool
 	for linesCount < 50 && !timeout{
 		select{
-		case nextLine := <- monitoringLogFile.Lines:
+		case nextLine := <- monitoringLogFile.fwdLogLinesRead.Lines:
 			linesRead = append(linesRead, nextLine)
 			linesCount++
 		case <- time.After(1 * time.Second):
@@ -282,7 +287,7 @@ func (monitoringLogFile *MonitoringLogFile) GetLogs() []string{
 		}
 	}
 	log.Info("Consumed ", linesCount, " lines")
-	monitoringLogFile.LinesConsumed <- linesCount
+	monitoringLogFile.fwdLogLinesRead.LinesConsumed <- linesCount
 	return linesRead
 }
 
@@ -290,17 +295,17 @@ func (monitoringLogFile *MonitoringLogFile) addLine(bytes []byte, linesCh chan s
 	if len(bytes) > 0{
 		linesCh <- string(bytes)
 		monitoringLogFile.Offset += int64(len(bytes))
-		monitoringLogFile.LinesProduced += 1
+		monitoringLogFile.fwdLogLinesRead.LinesProduced += 1
 	}
 }
 
 func (monitoringLogFile *MonitoringLogFile) waitForConsuming(){
-	for monitoringLogFile.LinesProduced > 50{
-		log.Info("Lines available for consuming ", monitoringLogFile.LinesProduced)
+	for monitoringLogFile.fwdLogLinesRead.LinesProduced > 50{
+		log.Info("Lines available for consuming ", monitoringLogFile.fwdLogLinesRead.LinesProduced)
 		log.Info("Offset ", monitoringLogFile.Offset)
-		linesConsumed := <- monitoringLogFile.LinesConsumed
-		monitoringLogFile.LinesProduced -= linesConsumed
-		log.Info("Lines available After consuming ", monitoringLogFile.LinesProduced)
+		linesConsumed := <- monitoringLogFile.fwdLogLinesRead.LinesConsumed
+		monitoringLogFile.fwdLogLinesRead.LinesProduced -= linesConsumed
+		log.Info("Lines available After consuming ", monitoringLogFile.fwdLogLinesRead.LinesProduced)
 	}
 }
 
