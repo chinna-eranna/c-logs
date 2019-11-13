@@ -3,6 +3,7 @@ package utils
 import (
 	//"github.com/rjeczalik/notify"
 	log "github.com/Sirupsen/logrus"
+	"github.com/golang-collections/collections/stack"
 	"github.com/mitchellh/go-homedir"
 	"io"
 	"bufio"
@@ -59,14 +60,22 @@ func FileExists(dir string, filename string)(bool){
     return !info.IsDir()
 }
 
-func FindNextFile(dir string, fileName string, compressedFile bool, filePattern string)(string, error){
-	currentFile := fileName
-	if compressedFile && !strings.HasSuffix(currentFile, ".gz"){
-		currentFile = currentFile +  ".gz"
+func FindNextOldFile(dir string, fileName string, filePattern string)(string, error){
+	return findNextFile(dir, fileName, filePattern,  "old")
+}
+
+func  FindNextNewFile(dir string, fileName string, compressedFile bool, filePattern string)(string, error){
+	currentFileName := fileName
+	if compressedFile && !strings.HasSuffix(currentFileName, ".gz"){
+		currentFileName = currentFileName +  ".gz"
 	}
-	file, err := os.Stat(filepath.Join(dir, currentFile))
+	return findNextFile(dir, currentFileName, filePattern, "new")
+}
+
+func findNextFile(dir string, currentFileName string, filePattern string, nextType string)(string, error){
+	currentFile, err := os.Stat(filepath.Join(dir, currentFileName))
 	if err != nil {
-		log.Error("FindNextFile():Error while opening the currentFile - ", currentFile, err);
+		log.Error("FindNextFile():Error while opening the currentFile - ", currentFileName, err);
 		return "", err
 	}
 
@@ -76,9 +85,10 @@ func FindNextFile(dir string, fileName string, compressedFile bool, filePattern 
 		return "", err
 	}
 	
-	nextFile := file
+	nextFile := currentFile
 	foundNextFile:= false
 	for _,f := range filesCh {
+		log.Info("Current File: ", currentFileName, " file to compare: ", f.Name())
 		if strings.HasSuffix(f.Name(), ".swp") {
 			continue
 		}
@@ -87,16 +97,28 @@ func FindNextFile(dir string, fileName string, compressedFile bool, filePattern 
 			log.Error("findLatestFile():Error while matching the pattern ", filePattern, " with file ", f.Name(), " -- Error:  ", regexErr)
 			return "", regexErr
 		}
-		if fileMatch && f.Name() != file.Name(){
-			log.Debug("Next File to compare - ", f.Name(), " Timestamp - ", f.ModTime().Unix(), 
-				" currentFile Timestamp - ", file.ModTime().Unix(), " Current Next File Timestamp - ", nextFile.ModTime().Unix())
-			if f.ModTime().Unix() > file.ModTime().Unix() && (!foundNextFile  || f.ModTime().Unix() <= nextFile.ModTime().Unix()){
+		if fileMatch && f.Name() != currentFile.Name(){
+			log.Info("Next File to compare - ", f.Name(), " Timestamp - ", f.ModTime().UnixNano(), 
+				" currentFile Timestamp - ", currentFile.ModTime().UnixNano(), " Current Next File Timestamp - ", nextFile.ModTime().UnixNano())
+			if nextType == "new" && f.ModTime().UnixNano() > currentFile.ModTime().UnixNano() && 
+				(!foundNextFile  || f.ModTime().UnixNano() <= nextFile.ModTime().UnixNano()){
 				nextFile = f
 				foundNextFile =  true
 			}
+			if nextType == "old" && f.ModTime().UnixNano() < currentFile.ModTime().UnixNano() &&
+				 (!foundNextFile || f.ModTime().UnixNano() >= nextFile.ModTime().UnixNano()	){
+				nextFile = f
+				foundNextFile = true
+			}
+		}else{
+			if fileMatch{
+				log.Info("Ignoring current file ", f.Name())
+			}else{
+				log.Info("File ", f.Name() , "didn't match with pattern: ", filePattern)
+			}
 		}
 	}
-	log.Info("Current File: ", currentFile, " Next file: ", nextFile.Name())
+	log.Info("Current File: ", currentFileName, " Next file: ", nextFile.Name())
 	if foundNextFile{
 		return nextFile.Name(), nil
 	}else{
@@ -134,9 +156,9 @@ func findFile(dir string, filePattern string, kind string)(string, error){
 			return "", regexErr
 		}
 		if  fileMatch {
-			if ((kind == "latest" && f.ModTime().Unix() > fileModTime) || (kind == "oldest" && f.ModTime().Unix() < fileModTime)) {
+			if ((kind == "latest" && f.ModTime().UnixNano() > fileModTime) || (kind == "oldest" && f.ModTime().UnixNano() < fileModTime)) {
 				file = f.Name();
-				fileModTime = f.ModTime().Unix()
+				fileModTime = f.ModTime().UnixNano()
 			}
 		}
 	}
@@ -212,6 +234,15 @@ func FileSize(dir string, fileName string)(int64){
 	return file.Size()
 }
 
+func PrepareFile(dir string, fileName string)(string){
+	absFilepath := filepath.Join(dir, fileName)
+	if strings.HasSuffix(fileName, ".gz"){
+		uncompressedFilePath := filepath.Join(GetAppHomeDir(), strings.TrimSuffix(fileName, ".gz"))
+		GunzipFile(filepath.Join(dir, fileName), uncompressedFilePath)
+		absFilepath = uncompressedFilePath
+	}
+	return absFilepath
+}
 
 
 func GetFileContents(dir string, fileName string)(chan string, error){
@@ -277,7 +308,7 @@ func GetMatchingFiles(dir string, filePattern string, fullpath bool)([]GetFilesR
 			matchingFile = filepath.Join(dir, f.Name())
 		}
 		if filePattern == "" {
-			matchingFiles = append(matchingFiles, GetFilesResponse{matchingFile, f.ModTime().Unix()})
+			matchingFiles = append(matchingFiles, GetFilesResponse{matchingFile, f.ModTime().UnixNano()})
 			continue
 		}
 
@@ -287,7 +318,7 @@ func GetMatchingFiles(dir string, filePattern string, fullpath bool)([]GetFilesR
 			return matchingFiles, regexErr
 		}
 		if  fileMatch {
-			matchingFiles = append(matchingFiles, GetFilesResponse{matchingFile, f.ModTime().Unix()})
+			matchingFiles = append(matchingFiles, GetFilesResponse{matchingFile, f.ModTime().UnixNano()})
 		}else {
 			log.Info("Ignoring file ", f.Name(), " as the name didn't match with pattern ", filePattern)
 		}
@@ -337,4 +368,48 @@ func SearchLogs(directory string, filePattern string, searchQuery SearchQuery)([
 		return nil, errors.New(fmt.Sprint(err) + ": " + stderr.String())
 	}
 	return ParseResults(output), nil
+}
+
+type BackwardsFilePointer struct {
+	FileName string
+	Offset int64
+	Lines int
+}
+
+func PopulateBackPointers(dir string, filename string, offset int64, linesBetweenPointers int)(*stack.Stack, error) {
+	backwardsPointers := stack.New()
+	absFilepath := PrepareFile(dir, filename)
+	file,err := os.Open(absFilepath)
+	defer file.Close()
+	if err != nil {
+		log.Error("Got error while opening the file for populating back pointers ", absFilepath, err)
+		//TODO on Fail what?
+		return backwardsPointers, errors.New("error while opening file")
+	}
+	reader := bufio.NewReader(file)
+
+	startOffset := int64(0)
+	lastOffset := offset
+	pointerOffset :=  startOffset
+	linesRead := 0;
+
+	for pointerOffset < lastOffset-1 {
+		lineBytes, err := reader.ReadBytes('\n')
+		if err != nil{
+			log.Error("Error while populating back pointers for file: ", absFilepath, err);
+			break
+		}
+		linesRead++
+		pointerOffset  += int64(len(lineBytes))
+		if(linesRead == linesBetweenPointers){
+			backwardsPointers.Push(BackwardsFilePointer{filename, startOffset,  linesRead})
+			startOffset = pointerOffset 
+			linesRead = 0
+		}
+	}
+	if(linesRead  > 0){
+		backwardsPointers.Push(BackwardsFilePointer{filename, startOffset,  linesRead})
+	}
+
+	return backwardsPointers, nil
 }

@@ -28,7 +28,7 @@ func Init(box packr.Box) {
 		FullTimestamp: true,
 	})
 	log.SetOutput(f)
-	log.SetLevel(log.WarnLevel)
+	log.SetLevel(log.InfoLevel)
 	
 	
 	log.Println("Initializing API router")
@@ -72,7 +72,7 @@ func getLogs(w http.ResponseWriter, r *http.Request){
 
 	var logMessages []string
 	if fullContent {
-		fileContentCh, err := utils.GetFileContents(monitoringFile.Directory, monitoringFile.FileName)
+		fileContentCh, err := utils.GetFileContents(monitoringFile.Directory, monitoringFile.GetFileName())
 		if err != nil {
 			log.Error("Error while reading file contents - ", err)
 			http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -89,7 +89,7 @@ func getLogs(w http.ResponseWriter, r *http.Request){
 		}
 
 	}else{
-		logMessages = monitoringFile.GetLogs()
+		logMessages = monitoringFile.GetFwdLogs()
 	}
 	logMessagesJson,err := json.MarshalIndent(logMessages, " ", " ")
 	if(err != nil){
