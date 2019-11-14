@@ -377,6 +377,7 @@ type BackwardsFilePointer struct {
 }
 
 func PopulateBackPointers(dir string, filename string, offset int64, linesBetweenPointers int)(*stack.Stack, error) {
+	log.Info("Entered populating back pointers for Dir:", dir, " File:", filename, " till Offset:", offset, " with linesBetweenPointer ", linesBetweenPointers)
 	backwardsPointers := stack.New()
 	absFilepath := PrepareFile(dir, filename)
 	file,err := os.Open(absFilepath)

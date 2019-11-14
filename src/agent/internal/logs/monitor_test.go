@@ -4,6 +4,7 @@ import ("testing"
         "os"
         "time"
         "fmt"
+        "strconv"
         "agent/internal/utils"
         "github.com/stretchr/testify/require")
 
@@ -160,10 +161,11 @@ func writeLogs_GetLogs_Validate(f *os.File, prefix string, t *testing.T){
 }
 
 func getBwdLogs_Validate(prefix string, linesCount int, t *testing.T){
+    
     logs := getLogs("bwd", linesCount, t)
     nextLine := 0
     for linesCount  > 0 {
-        require.Equal(t, prefix + string(linesCount) + "\n", logs[nextLine], "line content didn't match in backward logs for line # : " + string(linesCount))
+        require.Equal(t, prefix + strconv.Itoa(linesCount) + "\n", logs[nextLine], "line content didn't match in backward logs for line # : " + string(linesCount))
         linesCount--
         nextLine++
     }
