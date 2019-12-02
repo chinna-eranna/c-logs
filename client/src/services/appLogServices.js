@@ -38,7 +38,7 @@ function startMonitoring(appId, startFrom){
 
 var logMsgRequests = {};
 
-function getLogMessages(appId, fullContent){
+function getLogMessages(appId, direction, fullContent){
     return new Promise((resolve, reject) => { 
             if(logMsgRequests[appId]){
                 console.log("Throttled getLogMessages for App :" + appId);
@@ -47,7 +47,9 @@ function getLogMessages(appId, fullContent){
             }
             //add content-type header
             logMsgRequests[appId] = true;
-            axios.get(`/v1/logDirectories/${appId}/logs?fullContent=${fullContent}`).then(function(response){
+            const url = (direction === "bwd") ? `/v1/logDirectories/${appId}/logs?bwdLogs=true` : `/v1/logDirectories/${appId}/logs?fullContent=${fullContent}`;
+            console.log("Url for fetching the logs: "  +  url);
+            axios.get(url).then(function(response){
                 resolve(response);
                 logMsgRequests[appId]  = false;
             }).catch(function(err){

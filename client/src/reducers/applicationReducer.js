@@ -20,6 +20,7 @@ export default function application(state = initialState, action){
             const monitoringApp = JSON.parse(JSON.stringify(action.payload.monitoringApp));
             monitoringApp.tail = action.payload.tail;
             monitoringApp.logsCount = 0;
+            monitoringApp.bwdLogsCount = 0,
             monitoringApp.displaySettings = false;
             monitoringApp.highlightedLines = [];
             newState = dotProp.set(state, 'monitoringApps', list => [...list, monitoringApp]);
@@ -74,17 +75,30 @@ export default function application(state = initialState, action){
 
             break;
         case types.LOGS_MESSAGES:
-            newState = dotProp.merge(state, 'logs_' + action.payload.id, action.payload.logs);
+            if(action.payload.direction === 'bwd'){
+                const oldLogs = dotProp.get(state,  'logs_' + action.payload.id);
+                newState = dotProp.set(newState, 'logs_' + action.payload.id, []);
+                const actualNewLogs = action.payload.logs;
+                const reverseNewLogs = actualNewLogs.reverse();
+                const allLogs=  reverseNewLogs.concat(oldLogs);
+                newState = dotProp.set(newState, 'logs_' + action.payload.id, allLogs);
+            }else{
+                newState = dotProp.merge(state, 'logs_' + action.payload.id, action.payload.logs);
+            }
             const app = newState.monitoringApps.filter((monApp) => {
                 return monApp.Id === action.payload.id;
             })
             if(app && app.length > 0){
                 newState = updateArrayProperty(newState, 'monitoringApps', 'Id', action.payload.id, 'logsCount', (app[0].logsCount ? app[0].logsCount : 0)  +  action.payload.logs.length);
+                if(action.payload.direction === 'bwd'){
+                    newState = updateArrayProperty(newState, 'monitoringApps', 'Id', action.payload.id, 'bwdLogsCount', (app[0].bwdLogsCount ? app[0].bwdLogsCount : 0)  +  action.payload.logs.length);
+                }
             }
             break;
         case types.CLEAR_LOGS:
             newState = dotProp.set(newState, 'logs_' + action.payload.id, []);
             newState = updateArrayProperty(newState,  'monitoringApps', 'Id', action.payload.id, 'logsCount',0);
+            newState = updateArrayProperty(newState,  'monitoringApps', 'Id', action.payload.id, 'bwdLogsCount',0);
             newState = updateArrayProperty(newState, 'monitoringApps', 'Id', action.payload.id, 'highlightedLines', []);
             break;
         case types.TOGGLE_DISPLAY_SETTINGS:
@@ -161,7 +175,8 @@ export default function application(state = initialState, action){
             newState = dotProp.delete(newState, 'resetApp');
             break;
         case types.BOOKMARK_LINE:
-            newState = appendArrayProperty(newState,  'monitoringApps', 'Id', action.payload.id, 'highlightedLines',action.payload.line);
+            const bookMarkLine = action.payload.line - getArrayProperty(newState, 'monitoringApps', 'Id', newState.activeAppId, 'bwdLogsCount');
+            newState = appendArrayProperty(newState,  'monitoringApps', 'Id', action.payload.id, 'highlightedLines',bookMarkLine);
             break;
         case types.SET_CURRENT_SEARCH_CURSOR:
             newState = updateArrayProperty(newState, 'monitoringApps', 'Id', action.payload.id, 'searchCursor', action.payload.searchCursor);

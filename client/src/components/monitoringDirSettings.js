@@ -278,7 +278,7 @@ const mapDispatchToProps = dispatch => {
         tail: (app)  => {dispatch(actions.tailContent(app));},
         startTail: (appId) => { dispatch({type: types.START_TAIL, payload: {'id':appId}});},
         stopTail: (appId) => { dispatch({type: types.STOP_TAIL, payload: {'id':appId}});},
-        getMoreLogs: (app)  => {dispatch(actions.getMoreLogs(app));},
+        getMoreLogs: (app)  => {dispatch(actions.getMoreLogs(app, 'down'));},
         search:  (app, searchStrType) => {dispatch(actions.search(app, searchStrType));},
         stopMonitoring: (appId) => { dispatch({type: types.STOP_MONITORING, payload: {'id':appId}});},
         openSearchDone: () => {dispatch({type: types.OPEN_SEARCH_DONE, payload: {}})}

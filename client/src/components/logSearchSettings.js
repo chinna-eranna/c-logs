@@ -117,20 +117,6 @@ export class LogSearchSettings extends Component {
         console.log("Render on LogSearchSettings is invoked,,SearchCursor Value" + (this.props.app.searchCursor));
         const searchText = this.props.app.searchText  ? this.props.app.searchText :  '';
         
-        let searchButtons = '';
-        if(this.props.view === 'logs' && this.props.app.searchResults  && this.props.app.searchResults.length > 0){
-            searchButtons  = ( <React.Fragment> 
-            <InputGroup.Append>
-                <Button variant="outline-warning" size="sm" onClick={() => this.moveSearchCursor('first')}>|◀</Button>
-                <Button variant="outline-warning" size="sm" onClick={() => this.moveSearchCursor('previous')}>◀</Button>
-                <Button variant="outline-warning" size="sm" onClick={() => this.moveSearchCursor('next')}>▶</Button>
-                <Button variant="outline-warning" size="sm" onClick={() => this.moveSearchCursor('last')}>▶|</Button>
-                <InputGroup.Text>{this.props.app.searchCursor + 1} (of {this.props.app.searchResults.length} matches) </InputGroup.Text>
-            </InputGroup.Append>
-            <div> </div>
-            </React.Fragment>
-            )
-        }
         let searchInPrgoressContent = '';
         if(this.props.app.searchInProgress){ 
             searchInPrgoressContent  = (
@@ -140,17 +126,48 @@ export class LogSearchSettings extends Component {
                 </div>
             )
         }
+        
+        let searchButtons = '';
         let searchTypeButtonContent =  '';
+        let searchControl = '';
+        let searchIcon = '';
+       
         if (this.props.view === 'logs') {
+            if(this.props.app.searchResults  && this.props.app.searchResults.length > 0){
+                searchButtons  = ( <React.Fragment> 
+                <InputGroup.Append>
+                    <Button variant="outline-warning" size="sm" onClick={() => this.moveSearchCursor('first')}>|◀</Button>
+                    <Button variant="outline-warning" size="sm" onClick={() => this.moveSearchCursor('previous')}>◀</Button>
+                    <Button variant="outline-warning" size="sm" onClick={() => this.moveSearchCursor('next')}>▶</Button>
+                    <Button variant="outline-warning" size="sm" onClick={() => this.moveSearchCursor('last')}>▶|</Button>
+                    <InputGroup.Text>{this.props.app.searchCursor + 1} (of {this.props.app.searchResults.length} matches) </InputGroup.Text>
+                </InputGroup.Append>
+                <div> </div>
+                </React.Fragment>
+                )
+            }
             searchTypeButtonContent  = (<InputGroup.Prepend>
                 <Button variant="outline-warning" onClick={() => this.togglesearchStrType()}>{this.state.searchStrType}</Button>
             </InputGroup.Prepend>)
-        }
-        let searchControl = '';
-        if(this.props.view === 'logs'){
             searchControl  = (<FormControl ref="inputNode" aria-describedby="basic-addon1" value={searchText} onKeyUp={(event) => this.handleKeyPress(event)} onChange={(e) => this.searchTextChangeHandler(e)} autoFocus={true}/>)
+            searchIcon = (<div style={{padding: '2px 5px 0px 5px' , fontSize: '20px'}}>🔍</div>)
+
+            return (
+                <React.Fragment>
+                    {searchIcon}
+                    <div>
+                        <InputGroup size="sm">
+                            {searchTypeButtonContent}
+                            {searchControl}
+                            {searchInPrgoressContent}
+                            {searchButtons}
+                        </InputGroup>
+                    </div>
+                </React.Fragment>
+            );
+       
         }
-        if(this.props.view ===  'searchResults'){
+        else{
             let searchingInFile = '';
             if(this.props.app.searchInProgress && this.props.app.filesToSearch){
                 searchingInFile = (<Form.Label> -- In {this.props.app.filesToSearch[this.props.app.nextFileToSearch].Name} ( {this.props.app.nextFileToSearch +1} of {this.props.app.filesToSearch.length} files)</Form.Label>);
@@ -160,30 +177,17 @@ export class LogSearchSettings extends Component {
                 searchMatches =  (<Form.Label> <b>Total Matches:</b> {this.props.app.searchResults.length}</Form.Label>);
             }
             console.log("App Content: "  + JSON.stringify(this.props.app));
-            searchControl = (
-                <div style={{paddingLeft: '1.0em', paddingTop:'2px'}}> <Form.Label><b>Search Text:</b> {searchText}</Form.Label> {searchingInFile} {searchMatches}</div>
-            )
+            return (
+                <React.Fragment>
+                    {searchIcon}
+                    <div style={{paddingLeft: '1.0em', paddingTop:'2px'}}>
+                        <InputGroup size="sm">
+                        <Form.Label><b>Search Text:</b> {searchText}</Form.Label> {searchMatches}{searchInPrgoressContent} {searchingInFile}
+                        </InputGroup>
+                    </div>
+                </React.Fragment>
+            );
         }
-        
-        let searchIcon = '';
-        if (this.props.view === 'logs') {
-            searchIcon = (<div style={{padding: '2px 5px 0px 5px' , fontSize: '20px'}}>🔍</div>)
-        }
-
-        return (
-            <React.Fragment>
-                {searchIcon}
-                <div>
-                    <InputGroup size="sm">
-                        {searchTypeButtonContent}
-                        {searchControl}
-                        {searchInPrgoressContent}
-                        {searchButtons}
-                       
-                    </InputGroup>
-                </div>
-            </React.Fragment>
-        );
     }
 }
 

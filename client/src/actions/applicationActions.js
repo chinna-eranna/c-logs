@@ -44,15 +44,15 @@ export function monitorAppLog(app, startLogFile, fullContent, reset){
            dispatch({type: types.MONITOR_APP_LOG, payload: {monitoringApp: app, tail: !fullContent}});
            if(fullContent){
                console.log("Getting the full conetent of the file ", startLogFile);
-                getLogMessages(app.Id, true).then((response) => {
-                    const logsLinesCount =  logsResponseHandler(app, dispatch, response);
+                getLogMessages(app.Id, 'fwd', true).then((response) => {
+                    const logsLinesCount =  logsResponseHandler(app, 'fwd', dispatch, response);
                     resetMonitoring(app.Id, startLogFile, logsLinesCount+1).then(function(response){
-                        getLogs(app, dispatch);
+                        getLogs(app, 'fwd', dispatch);
                     });
                 });
            }else{
                 console.log("Invoking getLogs in success response handler of startMonitoring for app  " + JSON.stringify(app)) ; 
-                getLogs(app, dispatch);
+                getLogs(app, 'fwd', dispatch);
            }
         }, function(err){
             console.log("Error while starting the monitoring of an app, show error to user");
@@ -110,10 +110,14 @@ export function search(app, searchStrType) {
     }
 }
 
-export function getMoreLogs(app){
-    console.log("Invoked getMoreLogs for app  " + app.Name) ; 
-    return dispatch  => {   
-        getLogs(app, dispatch);
+export function getMoreLogs(app, direction){
+    console.log("Invoked getMoreLogs for app  " + app.Name + " direction: " +  direction) ; 
+    return dispatch  => {  
+        if(direction === 'down'){ 
+            getLogs(app, 'fwd', dispatch);
+        }else{
+            getLogs(app, 'bwd', dispatch);
+        }
     }
 }
 
@@ -189,16 +193,17 @@ export function resetApp(app){
     }
 }
 
-function getLogs(app, dispatch){
+function getLogs(app, direction, dispatch){
     dispatch({type: types.FETCH_LOGS_START, payload: {id:app.Id}});
-    getLogMessages(app.Id, false).then((response) => {logsResponseHandler(app, dispatch, response)});
+    getLogMessages(app.Id, direction, false).then((response) => {logsResponseHandler(app, direction, dispatch, response)});
 }
 
-function logsResponseHandler(app, dispatch, response){
+function logsResponseHandler(app, direction, dispatch, response){
         var logsLinesCount = 0;
+        console.log("Response for logs: " + JSON.stringify(response));
         if(response && response.data && response.data != null && response.data.length > 0){
             console.log("Got logs for app " + app.Name);
-            dispatch({type: types.LOGS_MESSAGES, payload: {id:app.Id, logs:response.data}});
+            dispatch({type: types.LOGS_MESSAGES, payload: {id:app.Id, logs:response.data, direction: direction}});
             dispatch({type:  types.FETCH_LOGS_END, payload: {id:app.Id, logsCount:response.data.length}});
             logsLinesCount = response.data.length;
         }else{

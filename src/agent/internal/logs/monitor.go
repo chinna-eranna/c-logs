@@ -9,7 +9,6 @@ import (
 	"path/filepath"
 	"os"
 	"bufio"
-	"io"
 	"time"
 	"agent/internal/utils"
 )
@@ -23,26 +22,12 @@ type MonitoringLogFile struct{
 	quitCh chan string
 	start bool
 	
-	fwdLogLinesRead LogLinesRead
-	bwdLogLinesRead LogLinesRead
+	fwdLogsReader LogsReader
+	bwdLogsReader LogsReader
 
 	//backwards variables
 	backwardsPointers *stack.Stack
 	
-}
-
-type LogLinesRead struct{
-	FileName string
-	Offset int64
-	Lines chan string
-	LinesConsumed chan int64
-	LinesProduced int64
-	quit bool
-	quitRequestCh chan string
-	quitResponseCh chan string
-
-	CompressedFile bool
-	nextFile bool
 }
 
 type ResetRequest struct{
@@ -67,8 +52,8 @@ func NewMonitoringLogFile(logDirectory utils.LogDirectory, startFile string, off
 	monitoringLogFile := MonitoringLogFile{}
 	monitoringLogFile.Directory = logDirectory.Directory
 	monitoringLogFile.FilePattern = logDirectory.LogFilePattern
-	monitoringLogFile.fwdLogLinesRead = NewLogLinesRead(startFile, offset)
-	monitoringLogFile.bwdLogLinesRead = NewLogLinesRead(startFile, offset)
+	monitoringLogFile.fwdLogsReader = NewLogsReader(startFile, offset)
+	monitoringLogFile.bwdLogsReader = NewLogsReader(startFile, offset)
 	monitoringLogFile.backwardsPointers  = stack.New()
 	monitoringLogFile.quitCh = quitCh
 	monitoringLogFile.start = true
@@ -76,15 +61,15 @@ func NewMonitoringLogFile(logDirectory utils.LogDirectory, startFile string, off
 	return &monitoringLogFile
 }
 
-func NewLogLinesRead(startFile string, offset int64) LogLinesRead {
-	logsLineRead := LogLinesRead{}
-	logsLineRead.FileName = startFile
-	logsLineRead.Offset = offset
-	logsLineRead.Lines = make(chan string, 1000)
-	logsLineRead.LinesConsumed = make(chan int64, 1000)
-	logsLineRead.quitResponseCh =  make(chan string, 1)
-	logsLineRead.quitRequestCh =  make(chan string, 1)
-	return logsLineRead
+func NewLogsReader(startFile string, offset int64) LogsReader {
+	logsReader := LogsReader{}
+	logsReader.FileName = startFile
+	logsReader.Offset = offset
+	logsReader.Lines = make(chan string, 1000)
+	logsReader.LinesConsumed = make(chan int64, 1000)
+	logsReader.quitResponseCh =  make(chan string, 1)
+	logsReader.quitRequestCh =  make(chan string, 1)
+	return logsReader
 }
 
 func MonitorLogPath(logDirectory utils.LogDirectory, startMonitoringReq StartMonitoringRequest) (MonitoringLogFile, error){
@@ -113,8 +98,8 @@ func MonitorLogPath(logDirectory utils.LogDirectory, startMonitoringReq StartMon
 	monitoringLogFile := NewMonitoringLogFile(logDirectory, startFile, offset)
 	Files[logDirectory.Id] = monitoringLogFile
 	
-	go monitoringLogFile.readBackwards()
-	go monitoringLogFile.readForwards(monitoringLogFile.start, monitoringLogFile.reset)
+	go monitoringLogFile.startReadBackwards()
+	go monitoringLogFile.startReadForwards(monitoringLogFile.start, monitoringLogFile.reset)
 	go monitoringLogFile.monitorDir()
 	log.Info("Started monitoring log path ", filepath.Join(dir, monFilePattern));
 
@@ -123,11 +108,12 @@ func MonitorLogPath(logDirectory utils.LogDirectory, startMonitoringReq StartMon
 
 
 func (monitoringLogFile *MonitoringLogFile) GetFileName()(string){
-	return monitoringLogFile.fwdLogLinesRead.FileName
+	return monitoringLogFile.fwdLogsReader.FileName
 }
 
 func (monitoringLogFile *MonitoringLogFile) StopMonitoring(){
-	monitoringLogFile.fwdLogLinesRead.quitRequestCh <- "quit"
+	monitoringLogFile.fwdLogsReader.quitRequestCh <- "quit"
+	monitoringLogFile.bwdLogsReader.quitRequestCh <- "quit"
 	monitoringLogFile.quitCh <- "quit"
 }
 
@@ -143,10 +129,10 @@ func (monitoringLogFile *MonitoringLogFile) ResetMonitoring(resetReq ResetReques
 	//Wait for the actual routine to quit
 	retries := 0
 	fwdQuit := false
-	monitoringLogFile.fwdLogLinesRead.quitRequestCh <- "quit"
+	monitoringLogFile.fwdLogsReader.quitRequestCh <- "quit"
 	for  retries < 5 || !fwdQuit{
 		select{
-		case <- monitoringLogFile.fwdLogLinesRead.quitResponseCh:
+		case <- monitoringLogFile.fwdLogsReader.quitResponseCh:
 			fwdQuit = true
 			break
 		case <- time.After(1 * time.Second):
@@ -156,36 +142,27 @@ func (monitoringLogFile *MonitoringLogFile) ResetMonitoring(resetReq ResetReques
 	}
 	monitoringLogFile.reset  = false
 	monitoringLogFile.resetLineNumber = resetReq.LineNumber
-	monitoringLogFile.fwdLogLinesRead = NewLogLinesRead(resetReq.FileName, 0)
-	go monitoringLogFile.readBackwards()
-	go monitoringLogFile.readForwards(false, true)
+	monitoringLogFile.fwdLogsReader = NewLogsReader(resetReq.FileName, 0)
+	monitoringLogFile.bwdLogsReader = NewLogsReader(resetReq.FileName, 0)
+	go monitoringLogFile.startReadBackwards()
+	go monitoringLogFile.startReadForwards(false, true)
 	log.Info("monitoringLogFile:",monitoringLogFile);
 	return true
 }
 
-
-func (monitoringLogFile *MonitoringLogFile) startRead(){
-	if(monitoringLogFile.start){
-		monitoringLogFile.start = false
-	}
-	if(monitoringLogFile.reset){
-		monitoringLogFile.fwdLogLinesRead.Offset = 0;
-	}
-}
-
-func (monitoringLogFile *MonitoringLogFile) readBackwards(){
-	log.Info("Start reading backwards - ", monitoringLogFile.bwdLogLinesRead.FileName)
-	linesCh := monitoringLogFile.bwdLogLinesRead.Lines
+func (monitoringLogFile *MonitoringLogFile) startReadBackwards(){
+	log.Info("Start reading backwards - ", monitoringLogFile.bwdLogsReader.FileName)
+	linesCh := monitoringLogFile.bwdLogsReader.Lines
 	for {
 		pointersStack, err := utils.PopulateBackPointers(monitoringLogFile.Directory, 
-			monitoringLogFile.bwdLogLinesRead.FileName, monitoringLogFile.bwdLogLinesRead.Offset, utils.NUM_LINES_BETWEEN_POINTERS)
+			monitoringLogFile.bwdLogsReader.FileName, monitoringLogFile.bwdLogsReader.Offset, utils.NUM_LINES_BETWEEN_POINTERS)
 		if err != nil {
-			log.Error("Could not read backpointers of  file  ", monitoringLogFile.bwdLogLinesRead.FileName)
+			log.Error("Could not read backpointers of  file  ", monitoringLogFile.bwdLogsReader.FileName)
 			monitoringLogFile.quitCh <- "quit"
 			return 
 		}
-		log.Info("Total Pointers are ", pointersStack.Len(), " for file ",monitoringLogFile.bwdLogLinesRead.FileName)
-		for pointersStack.Len() > 0 && !monitoringLogFile.bwdLogLinesRead.quit{
+		log.Info("Total Pointers are ", pointersStack.Len(), " for file ",monitoringLogFile.bwdLogsReader.FileName)
+		for pointersStack.Len() > 0 && !monitoringLogFile.bwdLogsReader.quit{
 			lastBackwardsPtr := pointersStack.Pop().(utils.BackwardsFilePointer)
 			absFilepath := utils.PrepareFile(monitoringLogFile.Directory, lastBackwardsPtr.FileName)
 			file,err := os.Open(absFilepath)
@@ -212,24 +189,24 @@ func (monitoringLogFile *MonitoringLogFile) readBackwards(){
 				linesFromOffset.Push(bytes)
 				linesReadCount++
 			}
-			for linesFromOffset.Len() > 0 && !monitoringLogFile.bwdLogLinesRead.quit {
+			for linesFromOffset.Len() > 0 && !monitoringLogFile.bwdLogsReader.quit {
 				bytes := linesFromOffset.Pop().([]byte)
-				monitoringLogFile.bwdLogLinesRead.addLine(bytes, linesCh)
-				monitoringLogFile.bwdLogLinesRead.waitForConsuming()
+				monitoringLogFile.bwdLogsReader.addLine(bytes, linesCh)
+				monitoringLogFile.bwdLogsReader.waitForConsuming()
 			}
 		}
-		if(monitoringLogFile.bwdLogLinesRead.quit){
+		if(monitoringLogFile.bwdLogsReader.quit){
 			break
 		}
 		//Find Next old file & populate pointersStack, if no file is present, break
 		nextFile, err := utils.FindNextOldFile(monitoringLogFile.Directory,
-			monitoringLogFile.bwdLogLinesRead.FileName,monitoringLogFile.FilePattern)
+			monitoringLogFile.bwdLogsReader.FileName,monitoringLogFile.FilePattern)
 		if err != nil {
-			log.Error("Failed  finding the next old file - relative to ", monitoringLogFile.bwdLogLinesRead.FileName);
+			log.Error("Failed  finding the next old file - relative to ", monitoringLogFile.bwdLogsReader.FileName);
 			break
 		}else if nextFile != ""{
-			monitoringLogFile.bwdLogLinesRead.FileName = nextFile
-			monitoringLogFile.bwdLogLinesRead.Offset = utils.FileSize(monitoringLogFile.Directory, nextFile)
+			monitoringLogFile.bwdLogsReader.FileName = nextFile
+			monitoringLogFile.bwdLogsReader.Offset = utils.FileSize(monitoringLogFile.Directory, nextFile)
 		}else{
 			log.Info("No old file exist, breaking the loop in readBackwards")
 			break
@@ -238,46 +215,11 @@ func (monitoringLogFile *MonitoringLogFile) readBackwards(){
 
 }
 
-func (monitoringLogFile *MonitoringLogFile) readForwards(start bool, reset bool){
-	absFilepath := utils.PrepareFile(monitoringLogFile.Directory, monitoringLogFile.fwdLogLinesRead.FileName)
-	file,err := os.Open(absFilepath)
-	defer file.Close()
-	if err != nil {
-		log.Error("Got error while opening the file ", absFilepath, err)
-		monitoringLogFile.quitCh <- "quit"
-		return
-	}
-	reader := bufio.NewReader(file)
-
-	if(reset){
-		//Correct the offset in reset  case
-		monitoringLogFile.fwdLogLinesRead.handleResetForwards(reader,  monitoringLogFile.resetLineNumber, monitoringLogFile.Directory)
-	}
-	if(start && monitoringLogFile.fwdLogLinesRead.Offset > 0){
-		discarded,err  := reader.Discard(int(monitoringLogFile.fwdLogLinesRead.Offset))
-			if err != nil{
-				log.Error("Could not seek into the file  ", absFilepath, " Bytes Discarded: ", discarded)
-				monitoringLogFile.quitCh <- "quit"
-				return 
-			}
-	}
-
+func (monitoringLogFile *MonitoringLogFile) startReadForwards(start bool, reset bool){
+	
 	for  {
-		log.Info("Start reading and buffering log file ", absFilepath)
-		
-		monitoringLogFile.startReadingForwards(reader);
+		absFilepath := utils.PrepareFile(monitoringLogFile.Directory, monitoringLogFile.fwdLogsReader.FileName)
 
-		if(monitoringLogFile.fwdLogLinesRead.nextFile){
-			monitoringLogFile.fwdLogLinesRead.nextFile  = false
-			monitoringLogFile.fwdLogLinesRead.Offset = 0;
-		}else if(monitoringLogFile.fwdLogLinesRead.CompressedFile) {
-			monitoringLogFile.fwdLogLinesRead.CompressedFile = false;
-		}else if(monitoringLogFile.fwdLogLinesRead.quit){
-			monitoringLogFile.fwdLogLinesRead.quitResponseCh <- "quit"
-			break;
-		}
-
-		absFilepath = utils.PrepareFile(monitoringLogFile.Directory, monitoringLogFile.fwdLogLinesRead.FileName)
 		log.Info("Start reading and buffering log file ", absFilepath)
 		file,err := os.Open(absFilepath)
 		defer file.Close()
@@ -286,11 +228,15 @@ func (monitoringLogFile *MonitoringLogFile) readForwards(start bool, reset bool)
 			monitoringLogFile.quitCh <- "quit"
 			return
 		}
-		reader = bufio.NewReader(file)
 
-		if monitoringLogFile.fwdLogLinesRead.Offset > 0 {
+		reader := bufio.NewReader(file)
+
+		if reset {
+			monitoringLogFile.fwdLogsReader.handleResetForwards(reader,  monitoringLogFile.resetLineNumber, monitoringLogFile.Directory)
+			reset = false
+		} else if monitoringLogFile.fwdLogsReader.Offset > 0 {
 			//TODO Discard in  a loop, if offset (of type  int64) has value > max int
-			discarded,err  := reader.Discard(int(monitoringLogFile.fwdLogLinesRead.Offset))
+			discarded,err  := reader.Discard(int(monitoringLogFile.fwdLogsReader.Offset))
 			if err != nil{
 				log.Error("Could not seek into the file  ", absFilepath, " Bytes Discarded: ", discarded)
 				monitoringLogFile.quitCh <- "quit"
@@ -298,31 +244,26 @@ func (monitoringLogFile *MonitoringLogFile) readForwards(start bool, reset bool)
 			}
 		}
 
-	}
-}
+		log.Info("Start reading and buffering log file ", absFilepath)
+		monitoringLogFile.readForwards(reader);
 
-func (logLinesRead *LogLinesRead) handleResetForwards(reader *bufio.Reader, resetLineNumber int, directory string) {
-	log.Info("Reset the monitoring to file ", logLinesRead.FileName)
-	
-	logLinesRead.Offset = 0;  //shouldn't the offset be  moving here ?
-
-	//skip the lines
-	skippedLines := 0
-	for skippedLines < resetLineNumber - 1 {
-		_,err := reader.ReadBytes('\n');
-		if err != nil{
-			absFilepath := filepath.Join(directory, logLinesRead.FileName)
-			log.Error("Error while skipping the lines monitoring file reset: ", absFilepath, err);
-			break
+		if(monitoringLogFile.fwdLogsReader.nextFile){
+			monitoringLogFile.fwdLogsReader.nextFile  = false
+			monitoringLogFile.fwdLogsReader.Offset = 0;
+		}else if(monitoringLogFile.fwdLogsReader.CompressedFile) {
+			monitoringLogFile.fwdLogsReader.CompressedFile = false;
+		}else if(monitoringLogFile.fwdLogsReader.quit){
+			monitoringLogFile.fwdLogsReader.quitResponseCh <- "quit"
+			break;
 		}
-		skippedLines++
+
+		
 	}
-	log.Info("Number of lines skipped for reset ", skippedLines)
 }
 
-func (monitoringLogFile *MonitoringLogFile) startReadingForwards(reader *bufio.Reader) {
-	linesCh := monitoringLogFile.fwdLogLinesRead.Lines
-	for !monitoringLogFile.fwdLogLinesRead.quit{
+func (monitoringLogFile *MonitoringLogFile) readForwards(reader *bufio.Reader) {
+	linesCh := monitoringLogFile.fwdLogsReader.Lines
+	for !monitoringLogFile.fwdLogsReader.quit{
 		if monitoringLogFile.reset  {
 			log.Info("Reset is set, hence quitting startReadingForwards")
 			break
@@ -330,142 +271,27 @@ func (monitoringLogFile *MonitoringLogFile) startReadingForwards(reader *bufio.R
 
 		bytes,err := reader.ReadBytes('\n');
 		if err != nil{
-			stopReading := monitoringLogFile.shdStopReadingForwards(err)
+			absFilepath := filepath.Join(monitoringLogFile.Directory, monitoringLogFile.fwdLogsReader.FileName)
+			log.Error("Error while reading the monitoring file: ", absFilepath, err);
+			stopReading := monitoringLogFile.fwdLogsReader.handleReadForwardEror(err, 
+				monitoringLogFile.Directory, monitoringLogFile.FilePattern)
 			if stopReading{
 				break;
 			}
 		}else{
 			log.Info("Lines Read:  "  + string(bytes))
-			monitoringLogFile.fwdLogLinesRead.addLine(bytes, linesCh)
-			monitoringLogFile.fwdLogLinesRead.waitForConsuming()
+			monitoringLogFile.fwdLogsReader.addLine(bytes, linesCh)
+			monitoringLogFile.fwdLogsReader.waitForConsuming()
 		}
-	}
-}
-
-func (monitoringLogFile *MonitoringLogFile) shdStopReadingForwards(err error)(bool){
-	log.Info("shdStopReadingForwards entered")
-	absFilepath := filepath.Join(monitoringLogFile.Directory, monitoringLogFile.fwdLogLinesRead.FileName)
-	log.Error("Error while reading the monitoring file: ", absFilepath, err);
-	
-	if err == io.EOF{
-		monitoringLogFile.fwdLogLinesRead.nextFile = true
-	}else {
-		//non EOF file error while reading, while for 3 seconds
-		//if compressed file found continue
-		waitTime := 0
-		for !monitoringLogFile.fwdLogLinesRead.CompressedFile && waitTime < 3000 && !monitoringLogFile.fwdLogLinesRead.quit{
-			monitoringLogFile.quitOrSleep(1000  * time.Millisecond); 
-			waitTime = waitTime + 1000
-		}
-		if !monitoringLogFile.fwdLogLinesRead.CompressedFile {
-			log.Error("Timeout waiting for compressed file, Start forward reading the next available file")
-			monitoringLogFile.fwdLogLinesRead.nextFile = true
-		}else{
-			//current file compressed, switch to compressed file read OR  request to quit
-			log.Info("Found Compressed file: ",monitoringLogFile.fwdLogLinesRead.CompressedFile)
-			return true
-		}
-	}
-	
-	if monitoringLogFile.fwdLogLinesRead.nextFile {
-		nextFile, err := utils.FindNextNewFile(monitoringLogFile.Directory,
-			monitoringLogFile.fwdLogLinesRead.FileName,monitoringLogFile.fwdLogLinesRead.CompressedFile,monitoringLogFile.FilePattern)
-		if err != nil {
-			//error while fetching next file, wait for 2 seconds, then continue reading the same file
-			log.Error("Got error while fetching next file ", err)
-			time.Sleep(2000 * time.Millisecond)
-			return false 
-		}
-		if nextFile != ""{
-			//found next file to read,stop reading current
-			monitoringLogFile.fwdLogLinesRead.CompressedFile = false
-			monitoringLogFile.fwdLogLinesRead.FileName = nextFile
-			monitoringLogFile.fwdLogLinesRead.nextFile = true
-			return true 
-		}else{
-			//no new file found, wait for 2 seconds, then continue reading the same file
-			monitoringLogFile.quitOrSleep(2000  * time.Millisecond)
-			return false
-		}
-	}
-	return false
-}
-
-func (monitoringLogFile *MonitoringLogFile) quitOrSleep(sleepTime time.Duration){
-	select{
-	case  <- monitoringLogFile.fwdLogLinesRead.quitRequestCh:
-		monitoringLogFile.fwdLogLinesRead.quit = true
-		monitoringLogFile.quitCh <- "quit"
-		log.Info("Got Quit Request")
-		break
-	case <- time.After(sleepTime):
-		break
 	}
 }
 
 func (monitoringLogFile *MonitoringLogFile) GetBwdLogs() []string{
-	var linesCount int64
-	var linesRead []string
-	var timeout bool
-	for linesCount < 50 && !timeout{
-		select{
-		case nextLine := <- monitoringLogFile.bwdLogLinesRead.Lines:
-			linesRead = append(linesRead, nextLine)
-			linesCount++
-		case <- time.After(1 * time.Second):
-			timeout = true
-			break
-		}
-	}
-	log.Info("Consumed backwards ", linesCount, " lines")
-	monitoringLogFile.bwdLogLinesRead.LinesConsumed <- linesCount
-	return linesRead
+	return monitoringLogFile.bwdLogsReader.getLogs("Backwards")
 }
 
 func (monitoringLogFile *MonitoringLogFile) GetFwdLogs() []string{
-	var linesCount int64
-	var linesRead []string
-	var timeout bool
-	for linesCount < 50 && !timeout{
-		select{
-		case nextLine := <- monitoringLogFile.fwdLogLinesRead.Lines:
-			linesRead = append(linesRead, nextLine)
-			linesCount++
-		case <- time.After(1 * time.Second):
-			timeout = true
-			break
-		}
-	}
-	log.Info("Consumed forward ", linesCount, " lines")
-	monitoringLogFile.fwdLogLinesRead.LinesConsumed <- linesCount
-	return linesRead
-}
-
-func (logLinesRead *LogLinesRead) addLine(bytes []byte, linesCh chan string){
-	if len(bytes) > 0{
-		linesCh <- string(bytes)
-		logLinesRead.Offset += int64(len(bytes))
-		logLinesRead.LinesProduced += 1
-	}
-}
-
-func (logLinesRead *LogLinesRead) waitForConsuming(){
-	for logLinesRead.LinesProduced > 50 && !logLinesRead.quit{
-		log.Info("Lines available for consuming ", logLinesRead.LinesProduced)
-		log.Info("Offset ", logLinesRead.Offset)
-
-		select {
-		case <- logLinesRead.quitRequestCh:
-			logLinesRead.quit = true
-			log.Info("Got Quit Request")
-			break
-		case linesConsumed := <- logLinesRead.LinesConsumed:
-			logLinesRead.LinesProduced -= linesConsumed
-			break
-		}
-		
-		log.Info("Lines available After consuming ", logLinesRead.LinesProduced)
-	}
+	return monitoringLogFile.fwdLogsReader.getLogs("Forward")
 }
 
 func (monitoringLogFile *MonitoringLogFile) monitorDir(){
@@ -505,13 +331,13 @@ func (monitoringLogFile *MonitoringLogFile) handleDirChangeNotification(event fs
 		log.Info("Directory Change Notification - Created file : ", event.Name)
 		fileName := event.Name
 		if strings.HasSuffix(fileName, ".gz") {
-			if  monitoringLogFile.fwdLogLinesRead.CompressedFile {
+			if  monitoringLogFile.fwdLogsReader.CompressedFile {
 				return;
 			}
 			log.Info("Got compressed file ", filepath.Join(monitoringLogFile.Directory, fileName))
 			//TODO Before setting compressedFile to true, need to check if the fileName matches the pattern
-			monitoringLogFile.fwdLogLinesRead.CompressedFile = true
-			monitoringLogFile.fwdLogLinesRead.FileName = fileName
+			monitoringLogFile.fwdLogsReader.CompressedFile = true
+			monitoringLogFile.fwdLogsReader.FileName = fileName
 		}
 		
 	case fsnotify.Remove:

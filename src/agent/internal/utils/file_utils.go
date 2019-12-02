@@ -88,7 +88,7 @@ func findNextFile(dir string, currentFileName string, filePattern string, nextTy
 	nextFile := currentFile
 	foundNextFile:= false
 	for _,f := range filesCh {
-		log.Info("Current File: ", currentFileName, " file to compare: ", f.Name())
+		log.Debug("Current File: ", currentFileName, " file to compare: ", f.Name())
 		if strings.HasSuffix(f.Name(), ".swp") {
 			continue
 		}
@@ -98,7 +98,7 @@ func findNextFile(dir string, currentFileName string, filePattern string, nextTy
 			return "", regexErr
 		}
 		if fileMatch && f.Name() != currentFile.Name(){
-			log.Info("Next File to compare - ", f.Name(), " Timestamp - ", f.ModTime().UnixNano(), 
+			log.Debug("Next File to compare - ", f.Name(), " Timestamp - ", f.ModTime().UnixNano(), 
 				" currentFile Timestamp - ", currentFile.ModTime().UnixNano(), " Current Next File Timestamp - ", nextFile.ModTime().UnixNano())
 			if nextType == "new" && f.ModTime().UnixNano() > currentFile.ModTime().UnixNano() && 
 				(!foundNextFile  || f.ModTime().UnixNano() <= nextFile.ModTime().UnixNano()){
@@ -112,9 +112,9 @@ func findNextFile(dir string, currentFileName string, filePattern string, nextTy
 			}
 		}else{
 			if fileMatch{
-				log.Info("Ignoring current file ", f.Name())
+				log.Debug("Ignoring current file ", f.Name())
 			}else{
-				log.Info("File ", f.Name() , "didn't match with pattern: ", filePattern)
+				log.Debug("File ", f.Name() , "didn't match with pattern: ", filePattern)
 			}
 		}
 	}

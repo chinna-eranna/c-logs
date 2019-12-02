@@ -58,7 +58,7 @@ func TestGetLogs_NewLogs_BwdLogsPickFromOldFile(t *testing.T){
     getBwdLogs_Validate("line:", 4, t)
 }
 
-func testGetLogs_compressedFile(t *testing.T){
+func TestGetLogs_compressedFile(t *testing.T){
     startMonitoring("compressed.txt.gz", "compressed*", t)
     defer Files[Id].StopMonitoring()
     logs := getLogs("fwd", 51, t)
@@ -66,7 +66,7 @@ func testGetLogs_compressedFile(t *testing.T){
 }
 
 
-func testGetLogs_startFrom_pickWithNextFile(t *testing.T){
+func TestGetLogs_startFrom_pickWithNextFile(t *testing.T){
     lastButOneFile := "./_test/pickNext1.txt"
     f, after := createFile(lastButOneFile, t)
     defer after(f, lastButOneFile)

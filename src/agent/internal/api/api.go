@@ -28,13 +28,15 @@ func Init(box packr.Box) {
 		FullTimestamp: true,
 	})
 	log.SetOutput(f)
-	log.SetLevel(log.InfoLevel)
+	log.SetOutput(os.Stdout)
+	log.SetLevel(log.DebugLevel)
 	
 	
 	log.Println("Initializing API router")
 	router := mux.NewRouter()
 	router.HandleFunc("/", http.FileServer(box).ServeHTTP).Methods("GET")
 	router.HandleFunc("/v1/logDirectories/{id}/logs", getLogs).Queries("fullContent", "{fullContent}").Methods("GET")
+	router.HandleFunc("/v1/logDirectories/{id}/logs", getLogs).Queries("bwdLogs", "{bwdLogs}").Methods("GET")
 	router.HandleFunc("/v1/logDirectories", addDirectory).Methods("POST")
 	router.HandleFunc("/v1/logDirectories", getAll).Methods("GET")
 	router.HandleFunc("/v1/logDirectories/{id}", removeDirectory).Methods("DELETE")
@@ -65,9 +67,13 @@ func getLogs(w http.ResponseWriter, r *http.Request){
 	fullContent, err := strconv.ParseBool(r.FormValue("fullContent"))
 	if err != nil {
 		log.Error("Invalid value for query param fullContent -  ", r.FormValue("fullContent"));
-		//TODO  separate error types for user errors vs application  errors.
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
+		fullContent = false
+	}
+
+	bwdLogs, err := strconv.ParseBool(r.FormValue("bwdLogs"))
+	if err != nil {
+		log.Error("Invalid value for query param bwdLogs -  ", r.FormValue("bwdLogs"));
+		bwdLogs = false
 	}
 
 	var logMessages []string
@@ -88,7 +94,9 @@ func getLogs(w http.ResponseWriter, r *http.Request){
 			}
 		}
 
-	}else{
+	}else if bwdLogs{
+		logMessages = monitoringFile.GetBwdLogs()
+	}else {
 		logMessages = monitoringFile.GetFwdLogs()
 	}
 	logMessagesJson,err := json.MarshalIndent(logMessages, " ", " ")

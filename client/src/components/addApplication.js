@@ -177,7 +177,8 @@ export class AddApplication extends Component {
 		
 		for(let index in this.props.filesList){
 			const file = this.props.filesList[index]
-			const lastModifiedTime = moment(file.LastModified*1000).format("MMM Do YYYY, h:mm:ss a");
+			const lastModifiedTime = moment(file.LastModified/1000000).format("MMM Do YYYY, h:mm:ss a");
+			console.log("Last Modified time: " + lastModifiedTime);
 			startLogContent.push(<Dropdown.Item size="sm" eventKey={file.Name} key={file.Name}>{file.Name + ' (' + lastModifiedTime+')'}</Dropdown.Item>)
 		}
 

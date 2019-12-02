@@ -22,9 +22,10 @@ export class LogsViewer extends Component {
 		this.bookmarkLine =  this.bookmarkLine.bind(this);
 	}
 
-	loadMoreLogs(){
+	loadMoreLogs(page, direction){
+		console.log("Page to load:" + page  + " direction: " +  direction);
 		//if(this.props.activeMonitoringApp[0].tail){
-			this.props.getMoreLogs(this.props.activeMonitoringApp[0]);
+			this.props.getMoreLogs(this.props.activeMonitoringApp[0], direction);
 		//}else{
 		//	console.log("Tailing is OFF, hence not loading");
 		//}
@@ -46,6 +47,7 @@ export class LogsViewer extends Component {
 					pageStart={0}
 					loadMore={this.loadMoreLogs}
 					hasMore={true}
+					isReverse={true}
 					loader={this.props.activeMonitoringApp[0].loading ? <div className="loader" key={0}>Loading ...</div> : ''}
 					useWindow={false}>
 					{this.getLogsToDisplay()}
@@ -83,7 +85,8 @@ export class LogsViewer extends Component {
 			//	logsHtml.push(<div style={{wordWrap: 'break-word', backgroundColor: '#6d6d6d', paddingTop:'1px', fontFamily: 'Verdana', color: 'white'}//}>  {this.props.logs[i]} </div>);
 				if( this.props.activeMonitoringApp[0].scrollToLine && i === this.props.activeMonitoringApp[0].scrollToLine - 1){
 					logsHtml.push(<div className={styles.logLineParent}><div ref={this.startAfterSearch} className={styles.highlightLine}>  <div className={styles.logLineActions} onClick={this.bookmarkLine.bind(this, i)}>⭐</div>{this.props.logs[i]} </div></div>);
-				}else if(this.props.activeMonitoringApp[0].highlightedLines.indexOf(i) >= 0){
+				}else if(this.props.activeMonitoringApp[0].highlightedLines.indexOf(i - this.props.activeMonitoringApp[0].bwdLogsCount) >= 0){
+					console.log("Highlighting line with i: " + i + " bwdLogsCount:  " + this.props.activeMonitoringApp[0].bwdLogsCount);
 					logsHtml.push(<div className={styles.logLineParent}><div className={styles.highlightLine}> <div className={styles.logLineActions}onClick={this.bookmarkLine.bind(this, i)}>⭐</div> {this.props.logs[i]} </div></div>);
 				}else{
 					logsHtml.push(<div className={styles.logLineParent}><div className={styles.logLine}> <div className={styles.logLineActions} onClick={this.bookmarkLine.bind(this, i)}>⭐</div> {this.props.logs[i]} </div></div>);
@@ -110,7 +113,7 @@ const mapStateToProps = state => {
 
 const mapDispatchToProps = dispatch => {
 	return {
-		getMoreLogs: (app)  => {dispatch(actions.getMoreLogs(app));},
+		getMoreLogs: (app, direction)  => {dispatch(actions.getMoreLogs(app, direction));},
 		resetScrollPosition:(topPosition, app) => { dispatch({type: types.RESET_SCROLL_POSITION, payload: {id: app.Id, 'top':topPosition}});},
 		bookmarkLine: (app, line) => {dispatch({type: types.BOOKMARK_LINE, payload: {id: app.Id, line: line}});}
 	};

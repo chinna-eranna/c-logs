@@ -192,7 +192,7 @@ const mapDispatchToProps = dispatch => {
 
         startTail: (appId) => { dispatch({type: types.START_TAIL, payload: {'id':appId}});},
         stopTail: (appId) => { dispatch({type: types.STOP_TAIL, payload: {'id':appId}});},
-        getMoreLogs: (app)  => {dispatch(actions.getMoreLogs(app));},
+        getMoreLogs: (app)  => {dispatch(actions.getMoreLogs(app, 'down'));},
   	};
 };
 
