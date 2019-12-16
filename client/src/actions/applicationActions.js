@@ -38,7 +38,6 @@ export function monitorAppLog(app, startLogFile, fullContent, reset){
         //TODO a progress bar should be displayed before starting the monitoring
         startMonitoring(app.Id, startLogFile).then(function(response){
             if(reset){
-                console.log("dispatch stopMonitoring in actions");
                 dispatch({type: types.STOP_MONITORING, payload: {'id':app.Id}});
             }
            dispatch({type: types.MONITOR_APP_LOG, payload: {monitoringApp: app, tail: !fullContent}});
@@ -66,7 +65,6 @@ export function searchInFile(app, nextFileIndex, searchStrType){
             console.log("searchInProgress is stopped");
             return;
         }
-        console.log("Got action to search with  index: " + nextFileIndex);
         const fileName = app.filesToSearch[nextFileIndex].Name;
         console.log("Got action to search in file: " + fileName);
         searchInApp(app.Id, app.searchText, searchStrType, [fileName]).then(function(response){
@@ -172,7 +170,6 @@ export function fetchFiles(directory, filePattern){
 }
 export function openSearch(){
     return (dispatch) => {
-        //console.log("Search open request");
         dispatch({type: types.OPEN_SEARCH, payload: {}});
     }
 }
@@ -200,9 +197,8 @@ function getLogs(app, direction, dispatch){
 
 function logsResponseHandler(app, direction, dispatch, response){
         var logsLinesCount = 0;
-        console.log("Response for logs: " + JSON.stringify(response));
         if(response && response.data && response.data != null && response.data.length > 0){
-            console.log("Got logs for app " + app.Name);
+            console.log("Got " + response.data.length + " logs for app " + app.Name);
             dispatch({type: types.LOGS_MESSAGES, payload: {id:app.Id, logs:response.data, direction: direction}});
             dispatch({type:  types.FETCH_LOGS_END, payload: {id:app.Id, logsCount:response.data.length}});
             logsLinesCount = response.data.length;

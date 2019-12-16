@@ -18,22 +18,22 @@ func TestPopulateBackPointers(t *testing.T) {
 	defer after(f, pointersFile)
 	writeContents(f, t)
 
-	offset, err := f.Seek(1, os.SEEK_CUR)
+	lastByteOffset, err := f.Seek(1, os.SEEK_CUR)
 	if err != nil {
 		require.Nil(t, err, "Error while getting current offset", err);
 	}
 
-	pointersStack, err := PopulateBackPointers("./_test", "backPointers.txt", offset, 5)
+	pointersStack, err := PopulateBackPointers("./_test", "backPointers.txt", lastByteOffset, 5)
 	if err != nil {
 		require.Nil(t, err, "Error while getting pointers", err);
 	}
 	
 	//File content has (two digits + newline) in each line,
 	//Total 17 lines written, each offset is for every 5  lines Hence offsets would be
-	//1, 16, 31, 46
+	//0, 15, 30, 45
 	
 	lastBackwardsPtr := pointersStack.Pop().(BackwardsFilePointer)
-	nextOffset := int64(46)
+	nextOffset := int64(45)
 	require.Equal(t, 2, lastBackwardsPtr.Lines, "Number of lines on last pointer should be 2")
 	require.Equal(t, nextOffset, lastBackwardsPtr.Offset, "Offset didn't match")
 
@@ -93,3 +93,17 @@ func createFile(fileName string, t *testing.T)(*os.File, func(f1 *os.File, fileN
     }
 }
 
+func TestFindOffset(t *testing.T){
+	offsetFile := "./_test/findOffset.txt"
+	f, after := createFile(offsetFile, t)
+	defer after(f, offsetFile)
+	writeContents(f, t)
+
+	offset,err := FindOffset("./_test", "findOffset.txt", 2)
+	require.Nil(t,  err, "Error while finding the offset", err)
+	require.Equal(t, int64(4), offset,  "Could not get expected offset 4")
+
+	offset,err = FindOffset("./_test", "findOffset.txt", 5)
+	require.Nil(t,  err, "Error while finding the offset", err)
+	require.Equal(t, int64(13), offset,  "Could not get expected offset 4")
+}

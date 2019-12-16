@@ -9,6 +9,7 @@ import *  as actions from '../actions/applicationActions';
 import * as types from '../actions/actionTypes';
 import styles from '../css/app.css';
 import _ from 'lodash'
+import VisibilitySensor from 'react-visibility-sensor';
 import scrollToComponent from 'react-scroll-to-component';
 
 export class LogsViewer extends Component {
@@ -20,10 +21,11 @@ export class LogsViewer extends Component {
 		this.state = {items: [<div>1</div>], initialLoad:false}
 		this.startAfterSearch  = createRef();
 		this.bookmarkLine =  this.bookmarkLine.bind(this);
+		this.fileInViewPort = this.fileInViewPort.bind(this);
+		this.reverse = false;
 	}
 
 	loadMoreLogs(page, direction){
-		console.log("Page to load:" + page  + " direction: " +  direction);
 		//if(this.props.activeMonitoringApp[0].tail){
 			this.props.getMoreLogs(this.props.activeMonitoringApp[0], direction);
 		//}else{
@@ -31,8 +33,16 @@ export class LogsViewer extends Component {
 		//}
 	}
 
+	fileInViewPort(visible, file){
+		console.log("VisibilitySensor callback - visibile: " + visible + " file: " + file);
+		if(visible){
+			this.props.setFileInViewPort(this.props.activeMonitoringApp[0], file);
+		}else{
+			this.props.setFileOutOfViewPort(this.props.activeMonitoringApp[0], file);
+		}
+	}
+
 	bookmarkLine(line){
-		console.log("Clicked line:  " + line);
 		this.props.bookmarkLine(this.props.activeMonitoringApp[0], line);
 	}
 
@@ -47,7 +57,7 @@ export class LogsViewer extends Component {
 					pageStart={0}
 					loadMore={this.loadMoreLogs}
 					hasMore={true}
-					isReverse={true}
+					isReverse={this.reverse}
 					loader={this.props.activeMonitoringApp[0].loading ? <div className="loader" key={0}>Loading ...</div> : ''}
 					useWindow={false}>
 					{this.getLogsToDisplay()}
@@ -58,38 +68,64 @@ export class LogsViewer extends Component {
 		}
 	}
 
-	componentDidUpdate(){
-		if(this.props.activeMonitoringApp && this.props.activeMonitoringApp.length && this.props.activeMonitoringApp[0].contentViewKey !== 'logs'){
+	componentDidUpdate(prevProp){
+		
+		const activeMonitoringApp = this.props.activeMonitoringApp && this.props.activeMonitoringApp.length > 0;
+		if(!activeMonitoringApp){
 			return;
 		}
-		console.log("ScrollToLine: this.startAfterSearch - " + this.startAfterSearch);
-		console.log("ScrollToLine: this.startAfterSearch.current - " + this.startAfterSearch.current);
 
-		if(this.props.logs && this.props.activeMonitoringApp[0].scrollToLine && 
-			this.props.activeMonitoringApp[0].scrollToLine > 0 && this.props.logs.length >= this.props.activeMonitoringApp[0].scrollToLine
+		if( this.props.activeMonitoringApp[0].contentViewKey !== 'logs'){
+			return;
+		}
+		if(prevProp.activeMonitoringApp && prevProp.activeMonitoringApp.length > 0){
+			if (prevProp.activeMonitoringApp[0].bwdLogsCount != this.props.activeMonitoringApp[0].bwdLogsCount){
+				this.reverse = true;
+			}else{
+				this.reverse = false;
+			}
+		}
+
+		if (this.props.activeMonitoringApp[0].scrollToLine && this.props.activeMonitoringApp[0].scrollToLine > 0 && 
+			this.props.logs && this.props.logs.length >= this.props.activeMonitoringApp[0].scrollToLine 
 			&& this.startAfterSearch.current){
 			this.props.resetScrollPosition(this.startAfterSearch.current.offsetTop, this.props.activeMonitoringApp[0]);
 			this.startAfterSearch  = createRef();
-		} else{
-			console.log("Not resetting scroll position after logsviewer componentDidUpdate");
 		}
 		
 	}
 
 
 	getLogsToDisplay(){
+		let previousFile = '';
+		const separator = '**************************************';
 		if(this.props.logs){
-			console.log("Rendering logs of length:" + this.props.logs.length);
 			var logsHtml = [];
 			for(var i = 0; i < this.props.logs.length;  i++){
-			//	logsHtml.push(<div style={{wordWrap: 'break-word', backgroundColor: '#6d6d6d', paddingTop:'1px', fontFamily: 'Verdana', color: 'white'}//}>  {this.props.logs[i]} </div>);
+				const logLine = this.props.logs[i][1];
+				const currentLogLineFileName = this.props.logs[i][0];
+			
+				if(previousFile !== currentLogLineFileName){
+					if(previousFile != ''){
+						const previousFileConst = previousFile;
+						logsHtml.push(<div className={styles.logLineParent}><VisibilitySensor onChange={ (visible) => this.fileInViewPort(visible, previousFileConst)}><div className={styles.logLine}>  {separator + previousFile + separator} </div></VisibilitySensor></div>)
+						logsHtml.push(<div className={styles.logLineParent}><div> <br/></div></div>)
+					}
+					logsHtml.push(<div className={styles.logLineParent}>
+						<VisibilitySensor onChange={ (visible) => this.fileInViewPort(visible, currentLogLineFileName)}>
+							<div className={styles.logLine}>  {separator + currentLogLineFileName + separator} </div>
+						</VisibilitySensor>
+						</div>)
+					previousFile  = currentLogLineFileName;
+				}
+
 				if( this.props.activeMonitoringApp[0].scrollToLine && i === this.props.activeMonitoringApp[0].scrollToLine - 1){
-					logsHtml.push(<div className={styles.logLineParent}><div ref={this.startAfterSearch} className={styles.highlightLine}>  <div className={styles.logLineActions} onClick={this.bookmarkLine.bind(this, i)}>⭐</div>{this.props.logs[i]} </div></div>);
+					logsHtml.push(<div className={styles.logLineParent}><div ref={this.startAfterSearch} className={styles.highlightLine}>  <div className={styles.logLineActions} onClick={this.bookmarkLine.bind(this, i)}>⭐</div>{logLine} </div></div>);
 				}else if(this.props.activeMonitoringApp[0].highlightedLines.indexOf(i - this.props.activeMonitoringApp[0].bwdLogsCount) >= 0){
-					console.log("Highlighting line with i: " + i + " bwdLogsCount:  " + this.props.activeMonitoringApp[0].bwdLogsCount);
-					logsHtml.push(<div className={styles.logLineParent}><div className={styles.highlightLine}> <div className={styles.logLineActions}onClick={this.bookmarkLine.bind(this, i)}>⭐</div> {this.props.logs[i]} </div></div>);
+					//console.log("Highlighting line with i: " + i + " bwdLogsCount:  " + this.props.activeMonitoringApp[0].bwdLogsCount);
+					logsHtml.push(<div className={styles.logLineParent}><div className={styles.highlightLine}> <div className={styles.logLineActions}onClick={this.bookmarkLine.bind(this, i)}>⭐</div> {logLine} </div></div>);
 				}else{
-					logsHtml.push(<div className={styles.logLineParent}><div className={styles.logLine}> <div className={styles.logLineActions} onClick={this.bookmarkLine.bind(this, i)}>⭐</div> {this.props.logs[i]} </div></div>);
+					logsHtml.push(<div className={styles.logLineParent}><div className={styles.logLine}> <div className={styles.logLineActions} onClick={this.bookmarkLine.bind(this, i)}>⭐</div> {logLine} </div></div>);
 				}
 			}
 			logsHtml.push(this.props.activeMonitoringApp[0].loading ? '' : <div style={{cursor:'pointer'}} onClick={this.loadMoreLogs}>Click to load more..🥃</div>)
@@ -115,7 +151,9 @@ const mapDispatchToProps = dispatch => {
 	return {
 		getMoreLogs: (app, direction)  => {dispatch(actions.getMoreLogs(app, direction));},
 		resetScrollPosition:(topPosition, app) => { dispatch({type: types.RESET_SCROLL_POSITION, payload: {id: app.Id, 'top':topPosition}});},
-		bookmarkLine: (app, line) => {dispatch({type: types.BOOKMARK_LINE, payload: {id: app.Id, line: line}});}
+		bookmarkLine: (app, line) => {dispatch({type: types.BOOKMARK_LINE, payload: {id: app.Id, line: line}});},
+		setFileInViewPort: (app, file) =>  {dispatch({type: types.FILE_IN_VIEW_PORT, payload: {id: app.Id, file: file}});},
+		setFileOutOfViewPort: (app, file) =>  {dispatch({type: types.FILE_OUT_OF_VIEW_PORT, payload: {id: app.Id, file: file}});}
 	};
 };
 

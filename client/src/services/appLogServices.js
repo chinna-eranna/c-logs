@@ -48,7 +48,6 @@ function getLogMessages(appId, direction, fullContent){
             //add content-type header
             logMsgRequests[appId] = true;
             const url = (direction === "bwd") ? `/v1/logDirectories/${appId}/logs?bwdLogs=true` : `/v1/logDirectories/${appId}/logs?fullContent=${fullContent}`;
-            console.log("Url for fetching the logs: "  +  url);
             axios.get(url).then(function(response){
                 resolve(response);
                 logMsgRequests[appId]  = false;

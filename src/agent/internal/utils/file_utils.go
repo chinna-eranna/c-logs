@@ -245,7 +245,7 @@ func PrepareFile(dir string, fileName string)(string){
 }
 
 
-func GetFileContents(dir string, fileName string)(chan string, error){
+func GetFileContents(dir string, fileName string)(chan []string, error){
 	absFilepath := filepath.Join(dir, fileName)
 	var fileSize int64
 	if strings.HasSuffix(fileName, ".gz"){
@@ -266,7 +266,7 @@ func GetFileContents(dir string, fileName string)(chan string, error){
 
 	
 	var bytesRead int64
-	linesReadCh := make(chan string, 1000)
+	linesReadCh := make(chan []string, 1000)
 	reader := bufio.NewReader(file)
 
 	go func(){
@@ -278,7 +278,7 @@ func GetFileContents(dir string, fileName string)(chan string, error){
 				break
 			}
 			bytesRead = bytesRead +  int64(len(bytes));
-			linesReadCh <- string(bytes)
+			linesReadCh <- []string{fileName,  string(bytes)}
 			log.Info("Line: " + string(bytes))
 		}
 		log.Info("Total bytes read ", bytesRead)
@@ -374,6 +374,34 @@ type BackwardsFilePointer struct {
 	FileName string
 	Offset int64
 	Lines int
+}
+
+func FindOffset(dir string, fileName string, lineNumber int)(int64, error){
+	absFilepath := PrepareFile(dir, fileName)
+	var offset int64
+
+	log.Info("Finding the offset  of line ", lineNumber , " for file ", absFilepath)
+	file,err := os.Open(absFilepath)
+	defer file.Close()
+	if err != nil {
+		log.Info("Got error while opening the file ", absFilepath, err)
+		return offset, err
+	}
+
+	reader := bufio.NewReader(file)
+	
+	skippedLines := 0
+	for skippedLines < lineNumber - 1 {
+		bytes,err := reader.ReadBytes('\n');
+		if err != nil{
+			log.Error("Error while finding the offset of line ", lineNumber, " in file: ", absFilepath, err);
+			break
+		}
+		offset = offset +  int64(len(bytes));
+		skippedLines++
+	}
+	log.Info("Number of lines skipped for reset ", skippedLines, " and offset ", offset)
+	return offset, nil
 }
 
 func PopulateBackPointers(dir string, filename string, offset int64, linesBetweenPointers int)(*stack.Stack, error) {

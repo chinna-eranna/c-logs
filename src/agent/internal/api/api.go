@@ -76,7 +76,7 @@ func getLogs(w http.ResponseWriter, r *http.Request){
 		bwdLogs = false
 	}
 
-	var logMessages []string
+	var logMessages [][]string
 	if fullContent {
 		fileContentCh, err := utils.GetFileContents(monitoringFile.Directory, monitoringFile.GetFileName())
 		if err != nil {

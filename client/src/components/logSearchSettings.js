@@ -53,11 +53,9 @@ export class LogSearchSettings extends Component {
 
     moveSearchCursor(action){
         if(this.props.app.searchCursor === undefined){
-            console.log("searchCursor is not defined");
             this.props.moveSearchCursor(this.props.app, 0);
             return;
         }
-        console.log("Moving search cursor for action  " +  action + " - current searchCursor: "  +  this.props.app.searchCursor);
         switch(action){
             case 'next':
                 this.props.moveSearchCursor(this.props.app, this.props.app.searchCursor + 1);
@@ -84,14 +82,11 @@ export class LogSearchSettings extends Component {
 
     componentDidUpdate(prevProps){
         if(this.props.app.contentViewKey !== this.props.view){
-            console.log("Not in view");
             return;
         }
         if(!this.props.app.filesToSearch){
-            console.log("Search is not defined yet");
             return;
         }
-        console.log("ComponentDidUpdate for logSearchSettings view " + this.props.view)
         if(this.props.app.nextFileToSearch !== prevProps.app.nextFileToSearch && 
                 this.props.app.nextFileToSearch !== this.state.currentFileToSearch){
             let currentFileToSearchBeforeStateChange = this.state.currentFileToSearch;
@@ -99,13 +94,10 @@ export class LogSearchSettings extends Component {
             const nextFileIndex = this.props.app.nextFileToSearch;
             if(nextFileIndex < this.props.app.filesToSearch.length){
                 //dispatch
-                console.log("Dispatch file Index: " + nextFileIndex + " currentFileToSearchBeforeStateChange : " + currentFileToSearchBeforeStateChange);
                 this.props.searchInFile(this.props.app, nextFileIndex,  this.state.searchStrType);
             }else{
                 console.log("Not dispatching searchInFile");
             }
-        }else{
-            console.log("Not dispatching searchInFile - No change in nextFileToSearch");
         }
     }
 
@@ -114,7 +106,6 @@ export class LogSearchSettings extends Component {
     }
 
     render(){
-        console.log("Render on LogSearchSettings is invoked,,SearchCursor Value" + (this.props.app.searchCursor));
         const searchText = this.props.app.searchText  ? this.props.app.searchText :  '';
         
         let searchInPrgoressContent = '';
@@ -176,7 +167,6 @@ export class LogSearchSettings extends Component {
             if(this.props.app.searchResults  && this.props.app.searchResults.length > 0){
                 searchMatches =  (<Form.Label> <b>Total Matches:</b> {this.props.app.searchResults.length}</Form.Label>);
             }
-            console.log("App Content: "  + JSON.stringify(this.props.app));
             return (
                 <React.Fragment>
                     {searchIcon}

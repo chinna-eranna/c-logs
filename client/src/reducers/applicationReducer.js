@@ -20,9 +20,12 @@ export default function application(state = initialState, action){
             const monitoringApp = JSON.parse(JSON.stringify(action.payload.monitoringApp));
             monitoringApp.tail = action.payload.tail;
             monitoringApp.logsCount = 0;
-            monitoringApp.bwdLogsCount = 0,
+            monitoringApp.bwdLogsCount = 0;
             monitoringApp.displaySettings = false;
             monitoringApp.highlightedLines = [];
+            monitoringApp.contentViewKey  =  'logs';
+            monitoringApp.currentFile = 'test.log';
+            monitoringApp.logFilesViewState = [];
             newState = dotProp.set(state, 'monitoringApps', list => [...list, monitoringApp]);
             newState = dotProp.set(newState, 'logs_' + monitoringApp.Id, []);
             newState = dotProp.set(newState, 'activeAppId', monitoringApp.Id);
@@ -75,6 +78,7 @@ export default function application(state = initialState, action){
 
             break;
         case types.LOGS_MESSAGES:
+            //Set  Logs
             if(action.payload.direction === 'bwd'){
                 const oldLogs = dotProp.get(state,  'logs_' + action.payload.id);
                 newState = dotProp.set(newState, 'logs_' + action.payload.id, []);
@@ -85,6 +89,8 @@ export default function application(state = initialState, action){
             }else{
                 newState = dotProp.merge(state, 'logs_' + action.payload.id, action.payload.logs);
             }
+
+            //Set Log Counts
             const app = newState.monitoringApps.filter((monApp) => {
                 return monApp.Id === action.payload.id;
             })
@@ -94,6 +100,29 @@ export default function application(state = initialState, action){
                     newState = updateArrayProperty(newState, 'monitoringApps', 'Id', action.payload.id, 'bwdLogsCount', (app[0].bwdLogsCount ? app[0].bwdLogsCount : 0)  +  action.payload.logs.length);
                 }
             }
+
+            //Set log file names
+
+            //find log files
+            const logFiles = action.payload.logs.map((elem, i) => { return elem[0]});
+            console.log("Log Files in logs: " + JSON.stringify(logFiles));
+            const uniqueLogFiles = new Set(logFiles); //remove duplicates
+            const getLogsFilesViewState = [...uniqueLogFiles].map((elem) => {return {name: elem, inViewPort: false}}); //convert to array of objects
+            console.log("UniqueLogFilesObjArray:" + JSON.stringify(logFilesViewState));
+
+            const storeLogFilesViewState = getArrayProperty(newState,  'monitoringApps', 'Id', action.payload.id, 'logFilesViewState');
+            //logFilesViewState  is of format  {name: 'file1.log', 'inViewPort': false/true}
+            let mergedLogFilesViewState;
+            if(action.payload.direction === 'bwd'){
+                mergedLogFilesViewState = getLogsFilesViewState.concat(storeLogFilesViewState)
+            }else{
+                mergedLogFilesViewState = storeLogFilesViewState.concat(getLogsFilesViewState)
+            }
+            //Remove the duplicates from mergedLogFilesViewState, and merge the inViewPort attribute value
+            const uniqueLogFilesViewState = mergedLogFilesViewState.reduce((m, elem) => m.set(elem.name, m.get(elem.name) || elem.inViewPort), new Map());
+            const resultLogFilesViewState = Array.from(uniqueLogFilesViewState.keys()).map((elem) => {return {name: elem, inViewPort: uniqueLogFilesViewState.get(elem)}});
+            newState = updateArrayProperty(newState,  'monitoringApps', 'Id', action.payload.id, 'logFilesViewState', resultLogFilesViewState);
+
             break;
         case types.CLEAR_LOGS:
             newState = dotProp.set(newState, 'logs_' + action.payload.id, []);
@@ -181,8 +210,33 @@ export default function application(state = initialState, action){
         case types.SET_CURRENT_SEARCH_CURSOR:
             newState = updateArrayProperty(newState, 'monitoringApps', 'Id', action.payload.id, 'searchCursor', action.payload.searchCursor);
             break;
+        case types.SET_CURRENT_FILE:
+            newState = updateArrayProperty(newState, 'monitoringApps', 'Id', action.payload.id, 'currentFile', action.payload.currentFile);
+            break;
+        case types.FILE_IN_VIEW_PORT:
+        case types.FILE_OUT_OF_VIEW_PORT:
+            const logFilesViewState = getArrayProperty(newState,  'monitoringApps', 'Id', action.payload.id, 'logFilesViewState');
+            console.log("logFilesViewState:"  + JSON.stringify(logFilesViewState));
+            const updatedLogFilesViewState = logFilesViewState.map((elem) => { 
+                if(elem.name  === action.payload.file){
+                    elem.inViewPort = (action.type  ===  types.FILE_IN_VIEW_PORT)? true: false;
+                }
+                return elem;
+             });
+             console.log("updatedLogFilesViewState:"  + JSON.stringify(updatedLogFilesViewState));
+             const totalLogFilesInViewState =  updatedLogFilesViewState.reduce((count, elem) =>{ return  elem.inViewPort ? count  + 1: count}, 0);
+             console.log("totalLogFilesInViewState:"  + totalLogFilesInViewState);
+             if(totalLogFilesInViewState > 0){
+                newState = updateArrayProperty(newState, 'monitoringApps', 'Id', action.payload.id, 'logFilesViewState', updatedLogFilesViewState);
+                
+                const currentFile = updatedLogFilesViewState.reduce((resultFile, elem) => { return elem.inViewPort ? elem.name : resultFile }, "");
+                console.log("currentFile:"  + currentFile);
+                newState =  updateArrayProperty(newState, 'monitoringApps', 'Id', action.payload.id, 'currentFile', currentFile);
+             }
+
+            break;
         default :
-        console.log('default: ' + JSON.stringify(action));
+            console.log('default: ' + JSON.stringify(action));
     }
     return newState;
 
@@ -194,7 +248,6 @@ export default function application(state = initialState, action){
 }
 
 function updateArrayProperty(state, array, filterPropName, filterPropVal, propName, propValue ){
-    console.log("Updating  property: "  + propName);
     var newState = state;
     for(var i in state[array]){
         if (state[array][i][filterPropName] === filterPropVal){

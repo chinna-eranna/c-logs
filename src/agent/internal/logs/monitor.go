@@ -65,7 +65,7 @@ func NewLogsReader(startFile string, offset int64) LogsReader {
 	logsReader := LogsReader{}
 	logsReader.FileName = startFile
 	logsReader.Offset = offset
-	logsReader.Lines = make(chan string, 1000)
+	logsReader.Lines = make(chan []string, 1000)
 	logsReader.LinesConsumed = make(chan int64, 1000)
 	logsReader.quitResponseCh =  make(chan string, 1)
 	logsReader.quitRequestCh =  make(chan string, 1)
@@ -142,10 +142,15 @@ func (monitoringLogFile *MonitoringLogFile) ResetMonitoring(resetReq ResetReques
 	}
 	monitoringLogFile.reset  = false
 	monitoringLogFile.resetLineNumber = resetReq.LineNumber
-	monitoringLogFile.fwdLogsReader = NewLogsReader(resetReq.FileName, 0)
-	monitoringLogFile.bwdLogsReader = NewLogsReader(resetReq.FileName, 0)
+	resetOffset, err := utils.FindOffset(monitoringLogFile.Directory, resetReq.FileName, resetReq.LineNumber)
+	if err != nil{
+		log.Error("Could not reset the pointers to file ", resetReq.FileName )
+		return false
+	}
+	monitoringLogFile.fwdLogsReader = NewLogsReader(resetReq.FileName, resetOffset)
+	monitoringLogFile.bwdLogsReader = NewLogsReader(resetReq.FileName, resetOffset)
 	go monitoringLogFile.startReadBackwards()
-	go monitoringLogFile.startReadForwards(false, true)
+	go monitoringLogFile.startReadForwards(false, false)
 	log.Info("monitoringLogFile:",monitoringLogFile);
 	return true
 }
@@ -191,7 +196,7 @@ func (monitoringLogFile *MonitoringLogFile) startReadBackwards(){
 			}
 			for linesFromOffset.Len() > 0 && !monitoringLogFile.bwdLogsReader.quit {
 				bytes := linesFromOffset.Pop().([]byte)
-				monitoringLogFile.bwdLogsReader.addLine(bytes, linesCh)
+				monitoringLogFile.bwdLogsReader.addLine(lastBackwardsPtr.FileName, bytes, linesCh)
 				monitoringLogFile.bwdLogsReader.waitForConsuming()
 			}
 		}
@@ -216,7 +221,6 @@ func (monitoringLogFile *MonitoringLogFile) startReadBackwards(){
 }
 
 func (monitoringLogFile *MonitoringLogFile) startReadForwards(start bool, reset bool){
-	
 	for  {
 		absFilepath := utils.PrepareFile(monitoringLogFile.Directory, monitoringLogFile.fwdLogsReader.FileName)
 
@@ -231,10 +235,7 @@ func (monitoringLogFile *MonitoringLogFile) startReadForwards(start bool, reset 
 
 		reader := bufio.NewReader(file)
 
-		if reset {
-			monitoringLogFile.fwdLogsReader.handleResetForwards(reader,  monitoringLogFile.resetLineNumber, monitoringLogFile.Directory)
-			reset = false
-		} else if monitoringLogFile.fwdLogsReader.Offset > 0 {
+		if monitoringLogFile.fwdLogsReader.Offset > 0 {
 			//TODO Discard in  a loop, if offset (of type  int64) has value > max int
 			discarded,err  := reader.Discard(int(monitoringLogFile.fwdLogsReader.Offset))
 			if err != nil{
@@ -256,8 +257,6 @@ func (monitoringLogFile *MonitoringLogFile) startReadForwards(start bool, reset 
 			monitoringLogFile.fwdLogsReader.quitResponseCh <- "quit"
 			break;
 		}
-
-		
 	}
 }
 
@@ -280,17 +279,17 @@ func (monitoringLogFile *MonitoringLogFile) readForwards(reader *bufio.Reader) {
 			}
 		}else{
 			log.Info("Lines Read:  "  + string(bytes))
-			monitoringLogFile.fwdLogsReader.addLine(bytes, linesCh)
+			monitoringLogFile.fwdLogsReader.addLine(monitoringLogFile.fwdLogsReader.FileName, bytes, linesCh)
 			monitoringLogFile.fwdLogsReader.waitForConsuming()
 		}
 	}
 }
 
-func (monitoringLogFile *MonitoringLogFile) GetBwdLogs() []string{
+func (monitoringLogFile *MonitoringLogFile) GetBwdLogs() [][]string{
 	return monitoringLogFile.bwdLogsReader.getLogs("Backwards")
 }
 
-func (monitoringLogFile *MonitoringLogFile) GetFwdLogs() []string{
+func (monitoringLogFile *MonitoringLogFile) GetFwdLogs() [][]string{
 	return monitoringLogFile.fwdLogsReader.getLogs("Forward")
 }
 

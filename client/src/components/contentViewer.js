@@ -31,19 +31,16 @@ export class ContentViewer extends Component {
 	}
 
 	componentDidUpdate(){
-		console.log("contentViewer::componentDidUpdte()");
 		if(this.refs.elem && this.props.activeMonitoringApp.length > 0 && this.props.activeMonitoringApp[0].resetScrollTop){
 			this.refs.elem.scrollTop = this.props.activeMonitoringApp[0].resetScrollTopValue;
 			this.props.resetScrollPositionDone();
 		}else if(this.refs.elem && this.props.activeMonitoringApp.length > 0 &&  this.props.activeMonitoringApp[0].scrollLogsOnAppSwitch){
 			if(!this.props.activeMonitoringApp[0].contentViewKey || this.props.activeMonitoringApp[0].contentViewKey === 'logs'){	
-				console.log("Setting scrollTopLogs to " + this.props.activeMonitoringApp[0].scrollTopLogs);
 				this.refs.elem.scrollTop  = this.props.activeMonitoringApp[0].scrollTopLogs ? this.props.activeMonitoringApp[0].scrollTopLogs : 0;
 			}else  if (this.props.activeMonitoringApp[0].contentViewKey === 'searchResults'){	
-				console.log("Setting scrollTopSearch to " + this.props.activeMonitoringApp[0].scrollTopSearch);
 				this.refs.searchElem.scrollTop  = this.props.activeMonitoringApp[0].scrollTopSearch ? this.props.activeMonitoringApp[0].scrollTopSearch : 0;
 			}else{
-
+				console.log("Not changing the scroll top");
 			}
 			this.props.scrollLogsOnAppSwitchDone(this.props.activeMonitoringApp[0].Id);
 		}

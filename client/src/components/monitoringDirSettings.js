@@ -65,7 +65,6 @@ export class MonitoringDirSettings extends Component {
         this.props.stopMonitoring(this.props.app.Id);
     }
     handleSwitch(state) {
-        console.log('Tail new state:', state);
         this.state.tail = state
         if(state){
             this.props.startTail(this.props.app.Id);
@@ -138,9 +137,7 @@ export class MonitoringDirSettings extends Component {
         if(this.state.tailStartLogsLinesCount === undefined){
             this.setState({tailStartLogsLinesCount: this.props.logsCount});
         }
-        console.log("props.logsCount : " + this.props.logsCount + " : this.state.tailStartLogsLinesCount - " + this.state.tailStartLogsLinesCount);
         if((this.props.logsCount - this.state.tailStartLogsLinesCount) >= 200){
-            console.log("Stopping the trail");
             this.props.stopTail(app.Id);
             this.setState({tail: false});
             return;

@@ -90,11 +90,9 @@ export class AddApplication extends Component {
 	}
 
 	static getDerivedStateFromProps (nextProps, prevState) {
-		console.log("Get DerivedState From Props: " + JSON.stringify(prevState));
 		if(nextProps && prevState){
 			const newState = prevState;
 			if(nextProps.resetApp && !prevState.selectApplication){
-				console.log("Resetting AddApplication state for resetting application " + nextProps.resetApp);
 				newState.selectApplication = true;
 				newState.selectedApp = nextProps.resetApp;
 				return newState;
@@ -178,7 +176,6 @@ export class AddApplication extends Component {
 		for(let index in this.props.filesList){
 			const file = this.props.filesList[index]
 			const lastModifiedTime = moment(file.LastModified/1000000).format("MMM Do YYYY, h:mm:ss a");
-			console.log("Last Modified time: " + lastModifiedTime);
 			startLogContent.push(<Dropdown.Item size="sm" eventKey={file.Name} key={file.Name}>{file.Name + ' (' + lastModifiedTime+')'}</Dropdown.Item>)
 		}
 
@@ -248,7 +245,6 @@ export class AddApplication extends Component {
 }
 
 const mapStateToProps = state => {
-	console.log("State in Add Application: " + state);
 	return {
 		availableApps: state.application.availableApps,
 		monitoringApps: state.application.monitoringApps,

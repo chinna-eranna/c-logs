@@ -54,7 +54,6 @@ export class LogSettings extends Component {
 
 
     handleSwitch(state) {
-        console.log('Tail new state:', state);
         this.state.tail = state
         if(state){
             this.props.startTail(this.props.app.Id);
@@ -93,9 +92,7 @@ export class LogSettings extends Component {
         if(this.state.tailStartLogsLinesCount === undefined){
             this.setState({tailStartLogsLinesCount: this.props.logsCount});
         }
-        console.log("props.logsCount : " + this.props.logsCount + " : this.state.tailStartLogsLinesCount - " + this.state.tailStartLogsLinesCount);
         if((this.props.logsCount - this.state.tailStartLogsLinesCount) >= 200){
-            console.log("Stopping the trail");
             this.props.stopTail(app.Id);
             this.setState({tail: false});
             return;
@@ -111,7 +108,6 @@ export class LogSettings extends Component {
     }
    
     render(){
-        console.log("Render on LogSettings is invoked");
         let modalDialog = '';
         if(this.state.stopMonitoringApp){
             modalDialog  =  (
@@ -135,19 +131,20 @@ export class LogSettings extends Component {
         if(this.props.view  === 'logs'){
             tailAndActionsContent = (
                 <div style={{marginLeft: 'auto', display:'flex'}}>
-                    <div style={{paddingRight: '0.5rem'}}>Tail :</div>
+                    <div style={{paddingRight: '0.5rem', borderRight: 'yellow 1px dashed'}}><b>File:</b> {this.props.app.currentFile}</div>
+                    <div style={{paddingLeft: '0.5rem', paddingRight: '0.5rem'}}><b>Tail:</b></div>
                     <Switch
                         checked={this.props.app.tail}
                         onChange={this.handleSwitch}
                         onColor="#86d3ff"
                         onHandleColor="#2693e6"
-                        handleDiameter={30}
+                        handleDiameter={26}
                         uncheckedIcon={false}
                         checkedIcon={false}
                         boxShadow="0px 1px 5px rgba(0, 0, 0, 0.6)"
                         activeBoxShadow="0px 0px 1px 10px rgba(0, 0, 0, 0.2)"
-                        height={20}
-                        width={48}
+                        height={16}
+                        width={40}
                         className="react-switch"
                         id="material-switch"
                     />
