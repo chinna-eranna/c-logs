@@ -53,12 +53,23 @@
   display: flex;
 }
 
+.logLineActionsPlaceHolder{
+  display: inline;
+  padding-right: 0.85em;
+}
+
+.logLineParent:hover .logLineActionsPlaceHolder{
+  display: none;
+}
+
 .logLineActions{
   display: none;
 }
 
 .logLineParent:hover .logLineActions{
   display: inline;
+  cursor: pointer;
+  font-size: 0.85em
 }
 
 .confirmDialog{

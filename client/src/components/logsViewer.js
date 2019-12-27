@@ -11,18 +11,21 @@ import styles from '../css/app.css';
 import _ from 'lodash'
 import VisibilitySensor from 'react-visibility-sensor';
 import scrollToComponent from 'react-scroll-to-component';
+import ReactHtmlParser, {convertNodeToElement} from 'react-html-parser';
 
 export class LogsViewer extends Component {
 
 	constructor(props){
 		super(props);
 		this.loadMoreLogs = this.loadMoreLogs.bind(this);
+		this.loadNextLogs = this.loadNextLogs.bind(this);
 		this.getLogsToDisplay = this.getLogsToDisplay.bind(this);
 		this.state = {items: [<div>1</div>], initialLoad:false}
 		this.startAfterSearch  = createRef();
 		this.bookmarkLine =  this.bookmarkLine.bind(this);
 		this.fileInViewPort = this.fileInViewPort.bind(this);
 		this.reverse = false;
+		this.transform = this.transform.bind(this);
 	}
 
 	loadMoreLogs(page, direction){
@@ -31,6 +34,10 @@ export class LogsViewer extends Component {
 		//}else{
 		//	console.log("Tailing is OFF, hence not loading");
 		//}
+	}
+
+	loadNextLogs(){
+		this.props.getMoreLogs(this.props.activeMonitoringApp[0], 'down');
 	}
 
 	fileInViewPort(visible, file){
@@ -95,40 +102,67 @@ export class LogsViewer extends Component {
 		
 	}
 
+	transform(node, index) {
+		console.log("Node details: type: " + node.type +  "  name: "  + node.name);
+		if (node.type === 'tag' && node.name === 'font') {
+		  return convertNodeToElement(node, index, transform);
+		}
+	  }
 
 	getLogsToDisplay(){
 		let previousFile = '';
 		const separator = '**************************************';
 		if(this.props.logs){
 			var logsHtml = [];
+			var classNameRegEx = new RegExp('\s(\w+\.[\.\w]+\w)\s', 'g');
 			for(var i = 0; i < this.props.logs.length;  i++){
-				const logLine = this.props.logs[i][1];
+				const logLineParts = classNameRegEx.exec(this.props.logs[i][1]);
+				let logLine = '';
+				if(logLineParts  != null){
+					const logLineBeforeMatch = logLine.substring(0, logLinesParts.index)
+					const logLineMatch = logLine.substring(logLinesParts.index, logLinesParts.lastIndex)
+					const logLineAfterMatch = logLine.substring(logLinesParts.lastIndex)
+					logLine = (<React.Fragment><span>{logLineBeforeMatch}</span><span><font color="yellow">{logLineMatch}</font></span><span>{logLineAfterMatch}</span></React.Fragment>)
+				}else{
+					logLine = (<React.Fragment>this.props.logs[i][1]</React.Fragment>)
+				}
+
 				const currentLogLineFileName = this.props.logs[i][0];
 			
 				if(previousFile !== currentLogLineFileName){
 					if(previousFile != ''){
 						const previousFileConst = previousFile;
-						logsHtml.push(<div className={styles.logLineParent}><VisibilitySensor onChange={ (visible) => this.fileInViewPort(visible, previousFileConst)}><div className={styles.logLine}>  {separator + previousFile + separator} </div></VisibilitySensor></div>)
+						logsHtml.push(<div className={styles.logLineParent}>
+							<VisibilitySensor onChange={ (visible) => this.fileInViewPort(visible, previousFileConst)}>
+								<div className={styles.logLine}>  {separator + previousFile + separator} </div>
+							</VisibilitySensor></div>)
 						logsHtml.push(<div className={styles.logLineParent}><div> <br/></div></div>)
 					}
-					logsHtml.push(<div className={styles.logLineParent}>
-						<VisibilitySensor onChange={ (visible) => this.fileInViewPort(visible, currentLogLineFileName)}>
-							<div className={styles.logLine}>  {separator + currentLogLineFileName + separator} </div>
-						</VisibilitySensor>
-						</div>)
+					if(currentLogLineFileName != ''){
+						logsHtml.push(<div className={styles.logLineParent}>
+							<VisibilitySensor onChange={ (visible) => this.fileInViewPort(visible, currentLogLineFileName)}>
+								<div className={styles.logLine}>  {separator + currentLogLineFileName + separator} </div>
+							</VisibilitySensor>
+							</div>)
+					}
 					previousFile  = currentLogLineFileName;
 				}
 
+				let logLineHtml = '';
 				if( this.props.activeMonitoringApp[0].scrollToLine && i === this.props.activeMonitoringApp[0].scrollToLine - 1){
-					logsHtml.push(<div className={styles.logLineParent}><div ref={this.startAfterSearch} className={styles.highlightLine}>  <div className={styles.logLineActions} onClick={this.bookmarkLine.bind(this, i)}>⭐</div>{logLine} </div></div>);
+					logLineHtml = <div ref={this.startAfterSearch} className={styles.highlightLine}> {logLine} </div>;
 				}else if(this.props.activeMonitoringApp[0].highlightedLines.indexOf(i - this.props.activeMonitoringApp[0].bwdLogsCount) >= 0){
 					//console.log("Highlighting line with i: " + i + " bwdLogsCount:  " + this.props.activeMonitoringApp[0].bwdLogsCount);
-					logsHtml.push(<div className={styles.logLineParent}><div className={styles.highlightLine}> <div className={styles.logLineActions}onClick={this.bookmarkLine.bind(this, i)}>⭐</div> {logLine} </div></div>);
+					logLineHtml = <div className={styles.highlightLine}> {logLine} </div>;
 				}else{
-					logsHtml.push(<div className={styles.logLineParent}><div className={styles.logLine}> <div className={styles.logLineActions} onClick={this.bookmarkLine.bind(this, i)}>⭐</div> {logLine} </div></div>);
+					logLineHtml = <div className={styles.logLine}> {logLine} </div>;
 				}
+				logsHtml.push(<div className={styles.logLineParent}>
+					<div className={styles.logLineActionsPlaceHolder}></div>
+					<div className={styles.logLineActions} onClick={this.bookmarkLine.bind(this, i)}>⭐</div>
+					{logLineHtml}</div>);
 			}
-			logsHtml.push(this.props.activeMonitoringApp[0].loading ? '' : <div style={{cursor:'pointer'}} onClick={this.loadMoreLogs}>Click to load more..🥃</div>)
+			logsHtml.push(this.props.activeMonitoringApp[0].loading ? '' : <div style={{cursor:'pointer'}} onClick={this.loadNextLogs}>Click to load more..🥃</div>)
 			return logsHtml;
 		}else{
 			console.log("No logs yet");

@@ -125,8 +125,8 @@ export default function application(state = initialState, action){
 
             break;
         case types.CLEAR_LOGS:
-            newState = dotProp.set(newState, 'logs_' + action.payload.id, []);
-            newState = updateArrayProperty(newState,  'monitoringApps', 'Id', action.payload.id, 'logsCount',0);
+            newState = dotProp.set(newState, 'logs_' + action.payload.id, [['', '------------ Cleared ----------']]);
+            newState = updateArrayProperty(newState,  'monitoringApps', 'Id', action.payload.id, 'logsCount',1);
             newState = updateArrayProperty(newState,  'monitoringApps', 'Id', action.payload.id, 'bwdLogsCount',0);
             newState = updateArrayProperty(newState, 'monitoringApps', 'Id', action.payload.id, 'highlightedLines', []);
             break;
