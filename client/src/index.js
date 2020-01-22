@@ -3,7 +3,7 @@ import ReactDOM from "react-dom";
 import {Provider} from 'react-redux';
 import configureStore from './store/configureStore';
 import ContentViewer from './components/contentViewer'
-import MonitoringAppLogList from './components/monitoringAppLogList'
+import ApplicationLogList from './components/applicationLogList'
 import * as actions from './actions/applicationActions'
 
 const store = configureStore();
@@ -33,7 +33,7 @@ ReactDOM.render(
                     
                 <div className="row">
                     <div style={{paddingLeft:'5px', paddingRight:'5px', width:'100%'}}>
-                        <MonitoringAppLogList/>
+                        <ApplicationLogList/>
                     </div>
                 </div>
                 

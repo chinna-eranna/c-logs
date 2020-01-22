@@ -114,17 +114,19 @@ export class LogsViewer extends Component {
 		const separator = '**************************************';
 		if(this.props.logs){
 			var logsHtml = [];
-			var classNameRegEx = new RegExp('\s(\w+\.[\.\w]+\w)\s', 'g');
+			var classNameRegEx = new RegExp('\\s(\\w+\\.[\\.\\w]+\\w)\\s', 'g');
 			for(var i = 0; i < this.props.logs.length;  i++){
+				classNameRegEx.lastIndex = 0;
 				const logLineParts = classNameRegEx.exec(this.props.logs[i][1]);
-				let logLine = '';
+				let logLine = this.props.logs[i][1];
+				console.log("LogLineParts: " + logLineParts);
 				if(logLineParts  != null){
-					const logLineBeforeMatch = logLine.substring(0, logLinesParts.index)
-					const logLineMatch = logLine.substring(logLinesParts.index, logLinesParts.lastIndex)
-					const logLineAfterMatch = logLine.substring(logLinesParts.lastIndex)
+					const logLineBeforeMatch = logLine.substring(0, logLineParts.index)
+					const logLineMatch = logLine.substring(logLineParts.index, classNameRegEx.lastIndex)
+					const logLineAfterMatch = logLine.substring(classNameRegEx.lastIndex)
 					logLine = (<React.Fragment><span>{logLineBeforeMatch}</span><span><font color="yellow">{logLineMatch}</font></span><span>{logLineAfterMatch}</span></React.Fragment>)
 				}else{
-					logLine = (<React.Fragment>this.props.logs[i][1]</React.Fragment>)
+					logLine = (<React.Fragment>{this.props.logs[i][1]}</React.Fragment>)
 				}
 
 				const currentLogLineFileName = this.props.logs[i][0];

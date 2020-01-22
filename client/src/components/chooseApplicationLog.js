@@ -10,21 +10,18 @@ import Modal from 'react-bootstrap/Modal'
 import Dropdown from 'react-bootstrap/Dropdown'
 import DropdownButton from 'react-bootstrap/DropdownButton'
 import InputGroup from 'react-bootstrap/InputGroup'
-import FormControl from 'react-bootstrap/FormControl'
-import ModalDialog from 'react-bootstrap/ModalDialog'
-import ModalHeader from 'react-bootstrap/ModalHeader'
-import ModalTitle from 'react-bootstrap/ModalTitle'
-import ModalBody from 'react-bootstrap/ModalBody'
-import ModalFooter from 'react-bootstrap/ModalFooter'
+import ButtonGroup from 'react-bootstrap/ButtonGroup'
 import Form from 'react-bootstrap/Form'
 import * as types from '../actions/actionTypes';
 
 import * as actions from '../actions/applicationActions'
 import moment from 'moment'
 import '../css/app.css'
+import ListApplicationLogs from './listApplicationLogs';
+import AddNewApplicationLog from './provisionApplicationLog';
 
 
-export class AddApplication extends Component {
+export class ChooseApplicationLog extends Component {
 
 	constructor(props) {
 		super(props);
@@ -38,7 +35,12 @@ export class AddApplication extends Component {
 		this.getAvailableApps = this.getAvailableApps.bind(this);
 		this.handleAddAppLog = this.handleAddAppLog.bind(this);
 		this.handleCancelAppLog = this.handleCancelAppLog.bind(this);
+		this.handleCloseListApplicationLogs  =  this.handleCloseListApplicationLogs.bind(this);
+		this.handleCloseAddNewApplicationLog = this.handleCloseAddNewApplicationLog.bind(this);
+		this.handleAddNewAppLog = this.handleAddNewAppLog.bind(this);
+		this.handleEditApplicationLog = this.handleEditApplicationLog.bind(this);
 		this.addApplication = this.addApplication.bind(this);
+		this.listApplicationLogs = this.listApplicationLogs.bind(this);
 		this.getStartFromContent = this.getStartFromContent.bind(this);
 		this.readFullFileContent = this.readFullFileContent.bind(this);
 		this.handleReadFullFileContent  = this.handleReadFullFileContent.bind(this);
@@ -68,6 +70,25 @@ export class AddApplication extends Component {
 		}
 	}
 
+	handleCloseListApplicationLogs(){
+		this.setState({ showModalFor: '' });
+	}
+	handleCloseAddNewApplicationLog(){
+		this.setState({showModalFor: 'listApps' });
+	}
+
+	listApplicationLogs(){
+		this.setState({showModalFor: 'listApps'});
+	}
+
+	handleAddNewAppLog(){
+		this.setState({showModalFor: 'addNewApplicationLog'});
+	}
+
+	handleEditApplicationLog(appId){
+		this.setState({showModalFor: 'editApplicationLog', editAppId:appId});
+	}
+	
 	handleReadFullFileContent(){
 		this.setState({readFullFileContent:!this.state.readFullFileContent});
 	}
@@ -121,6 +142,8 @@ export class AddApplication extends Component {
 			availableAppsContent.push(<Dropdown.Item size="sm" eventKey={app} key={app}>{app}</Dropdown.Item>);
 		}
 
+		let addApplicationButton = this.state.selectedApp != this.none ? '' : (<Button variant="warning" onClick={this.handleAddNewAppLog} size="sm" >Add New</Button>);
+
 		let selectedApp = this.state.selectedApp ? this.state.selectedApp : '-None-';
 		let selectAppContent = ''
 		if(this.props.resetApp){
@@ -138,17 +161,20 @@ export class AddApplication extends Component {
 				</InputGroup>);
 		}else{
 			selectAppContent = (
-				<InputGroup size="sm" className="mb-3">
-					<InputGroup.Prepend>
-						<InputGroup.Text id="basic-addon1">Application</InputGroup.Text>
-					</InputGroup.Prepend>
-					<DropdownButton size="sm" as={InputGroup.Prepend} variant="outline-secondary"
-					title={selectedApp} id="input-group-dropdown-1" onSelect={this.selectApplication} >
-						<div style={{maxHeight:'10em', overflowY:  'scroll'}}>
-							{availableAppsContent}
-						</div>
-					</DropdownButton>
-				</InputGroup>
+				<div>
+					<InputGroup size="sm" className="mb-3">
+						<InputGroup.Prepend>
+							<InputGroup.Text id="basic-addon1">Application</InputGroup.Text>
+						</InputGroup.Prepend>
+						<DropdownButton size="sm" as={InputGroup.Prepend} variant="outline-secondary"
+						title={selectedApp} id="input-group-dropdown-1" onSelect={this.selectApplication} >
+							<div style={{maxHeight:'10em', overflowY:  'scroll'}}>
+								{availableAppsContent}
+							</div>
+						</DropdownButton>
+					</InputGroup>
+					{addApplicationButton}
+				</div>
 			);
 		}
 
@@ -234,10 +260,28 @@ export class AddApplication extends Component {
 		);
 
 		let addAppContent = '';
-		if (this.state.selectApplication) {
+		if(this.state.showModalFor === 'listApps'){
+			addAppContent  = (<ListApplicationLogs closeHandler={this.handleCloseListApplicationLogs} addNewAppLogHandler={this.handleAddNewAppLog}
+				editApplicationLogHandler={this.handleEditApplicationLog} />)
+		}
+		else if(this.state.showModalFor === 'addNewApplicationLog' || this.state.showModalFor === 'editApplicationLog'){
+			addAppContent = (<AddNewApplicationLog closeHandler={this.handleCloseAddNewApplicationLog} editAppId={this.state.showModalFor === 'editApplicationLog' ? this.state.editAppId: undefined}/>);
+		}
+		else if (this.state.selectApplication) {
 			addAppContent = chooseApplicationContent;
 		} else {
-			addAppContent = (<Button variant="warning" size="sm" onClick={this.addApplication}>Choose Application</Button>);
+			addAppContent =  (
+				<Dropdown as={ButtonGroup} size="sm">
+					<Button variant="warning" onClick={this.addApplication}>Choose Application</Button>
+
+					<Dropdown.Toggle split variant="warning" id="dropdown-split-basic" />
+
+					<Dropdown.Menu>
+						<Dropdown.Item onClick={this.listApplicationLogs}>List Application Logs</Dropdown.Item>
+						<Dropdown.Item onClick={this.handleAddNewAppLog}>Add New Application Log</Dropdown.Item>
+					</Dropdown.Menu>
+					</Dropdown>
+			);
 		}
 
 		return addAppContent;
@@ -262,4 +306,4 @@ const mapDispatchToProps = dispatch => {
 	};
 };
 
-export default connect(mapStateToProps, mapDispatchToProps)(AddApplication);
+export default connect(mapStateToProps, mapDispatchToProps)(ChooseApplicationLog);

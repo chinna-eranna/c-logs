@@ -23,6 +23,30 @@ function  getLogDirectories(){
     }); 
 }
 
+function  createLogDirectory(name, directory, logFilePattern){
+    return new  Promise((resolve, reject) => {
+        const logTimestampPattern = '';
+        axios.post("/v1/logDirectories", {name, logFilePattern, directory, logTimestampPattern}).then((response) => {
+            resolve(response);
+        }).catch((err) => {
+            console.log("createLogDirectory()::failure response: " + err);
+            reject(err);
+        });
+    });
+}
+
+function  saveLogDirectory(id, name, directory, logFilePattern){
+    return new  Promise((resolve, reject) => {
+        const logTimestampPattern = '';
+        axios.put("/v1/logDirectories", {id, name, logFilePattern, directory, logTimestampPattern}).then((response) => {
+            resolve(response);
+        }).catch((err) => {
+            console.log("saveLogDirectory()::failure response: " + err);
+            reject(err);
+        });
+    });
+}
+
 function startMonitoring(appId, startFrom){
     return new Promise((resolve, reject) => { 
             //add content-type header
@@ -93,4 +117,4 @@ function getFiles(directory, filePattern) {
 
 
 
-export {monitorHostLogs, getLogDirectories, startMonitoring, getLogMessages, searchInApp, resetMonitoring, getFiles}
+export {monitorHostLogs, getLogDirectories, createLogDirectory, saveLogDirectory, startMonitoring, getLogMessages, searchInApp, resetMonitoring, getFiles}

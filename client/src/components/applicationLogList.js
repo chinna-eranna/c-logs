@@ -1,25 +1,12 @@
 import { Component } from 'react';
 import React from "react";
 import { connect } from 'react-redux';
-import Button from 'react-bootstrap/Button';
-import Container from 'react-bootstrap/Container'
-import Row from 'react-bootstrap/Row'
-import Col from 'react-bootstrap/Col'
-import ListGroup from 'react-bootstrap/ListGroup'
-import ListGroupItem from 'react-bootstrap/ListGroupItem'
-import Modal from 'react-bootstrap/Modal'
-import InputGroup from 'react-bootstrap/InputGroup'
-import FormControl from 'react-bootstrap/FormControl'
-import Dropdown from 'react-bootstrap/Dropdown'
-import DropdownButton from 'react-bootstrap/DropdownButton'
 import * as types from '../actions/actionTypes';
-import MonitoringDirSettings from './monitoringDirSettings'
+import ApplicationLog from './applicationLog'
 import * as actions from '../actions/applicationActions'
-import AddApplication from './addApplication'
+import ChooseApplicationLog from './chooseApplicationLog'
 
-
-
-export class MonitoringAppLogList extends Component {
+export class ApplicationLogList extends Component {
 
 	constructor(props) {
         super(props);
@@ -34,7 +21,6 @@ export class MonitoringAppLogList extends Component {
     selectApplication(appId) {
         this.props.selectApp(appId);
     }
-  
 
 	render() {
         let appLogItems = [];
@@ -42,14 +28,14 @@ export class MonitoringAppLogList extends Component {
         this.props.monitoringApps.map((app, index) => {
             const appId = `${app.Id}` ;
             const active = (app.Id === this.props.activeAppId) ? true: false;
-            appLogItems.push(<MonitoringDirSettings app={app} logsCount={app.logsCount}/>)
+            appLogItems.push(<ApplicationLog app={app} logsCount={app.logsCount}/>)
         }); 
 
         return (
             <div style={{textAlign:'center'}}>
                 <hr style={{border:'2px solid #ffc107'}}/>
                
-                <AddApplication/>
+                <ChooseApplicationLog/>
   
                 {appLogItems}
               
@@ -72,4 +58,4 @@ const mapDispatchToProps = dispatch => {
    };
 };
 
-export default connect(mapStateToProps, mapDispatchToProps)(MonitoringAppLogList);
+export default connect(mapStateToProps, mapDispatchToProps)(ApplicationLogList);

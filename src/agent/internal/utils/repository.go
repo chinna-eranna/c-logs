@@ -38,30 +38,50 @@ func GetAll()([]LogDirectory){
 
 func GetLogDirectory(id int)(LogDirectory){
 	logDirectories := GetAll()
-	for _, logDirectory  := range logDirectories {
-		if logDirectory.Id == id{
-			return logDirectory
-		}
+	index := findLogDirectoryIndex(id, logDirectories)
+	if index  >= 0 {
+		return logDirectories[index]
+	}else{
+		return LogDirectory{}
 	}
-	return LogDirectory{}
 }
 
-func AddLogDirectory(newLogDirectory LogDirectory) (int, error){
+func findLogDirectoryIndex(id int, logDirectories []LogDirectory)(int){
+	for i, logDirectory  := range logDirectories {
+		if logDirectory.Id == id{
+			return i
+		}
+	}
+	return -1
+}
+
+func SaveLogDirectory(logDirectory LogDirectory) (int, error){
 	logDirectories := GetAll()
-	validateErr := validatelogDirectories(logDirectories, newLogDirectory)
+	validateErr := validatelogDirectories(logDirectories, logDirectory)
 	if validateErr != nil {
 		return -1, validateErr
 	}
-	newLogDirectory.Id = getNextId(logDirectories)
-	logDirectories = append(logDirectories, newLogDirectory)
-	log.Info("Log Directories after add: ", logDirectories)
+	if(logDirectory.Id > 0){
+		logDirectoryIndex := findLogDirectoryIndex(logDirectory.Id, logDirectories);
+		if(logDirectories[logDirectoryIndex].Id  !=  logDirectory.Id){
+			log.Error("Didn't find LogDirectory for update. Id: " , logDirectory.Id);
+		}
+		logDirectories[logDirectoryIndex].Name = logDirectory.Name
+		logDirectories[logDirectoryIndex].Directory = logDirectory.Directory
+		logDirectories[logDirectoryIndex].LogFilePattern = logDirectory.LogFilePattern
+	}else{
+		logDirectory.Id = getNextId(logDirectories)
+		logDirectories = append(logDirectories, logDirectory)
+	}
+	log.Info("Log Directories after save: ", logDirectories)
 
 	err := saveLogDirRepository(logDirectories)
 	if err != nil {
 		return -1, err
 	} 
-	return newLogDirectory.Id, nil
+	return logDirectory.Id, nil
 }
+
 
 func RemoveLogDirectory(id int)(error){
 	logDirectories := GetAll()
@@ -117,6 +137,9 @@ func validatelogDirectories(logDirectories []LogDirectory, newLogDirectory LogDi
 	}
 	*/
 	for _,logDirectory := range logDirectories {
+		if(newLogDirectory.Id == logDirectory.Id){
+			continue
+		}
 		if strings.EqualFold(logDirectory.Name, newLogDirectory.Name) {
 			log.Error("Duplicate name error - ", newLogDirectory.Name)
 			return errors.New("Duplicate name")

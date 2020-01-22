@@ -38,6 +38,7 @@ func Init(box packr.Box) {
 	router.HandleFunc("/v1/logDirectories/{id}/logs", getLogs).Queries("fullContent", "{fullContent}").Methods("GET")
 	router.HandleFunc("/v1/logDirectories/{id}/logs", getLogs).Queries("bwdLogs", "{bwdLogs}").Methods("GET")
 	router.HandleFunc("/v1/logDirectories", addDirectory).Methods("POST")
+	router.HandleFunc("/v1/logDirectories", updateDirectory).Methods("PUT")
 	router.HandleFunc("/v1/logDirectories", getAll).Methods("GET")
 	router.HandleFunc("/v1/logDirectories/{id}", removeDirectory).Methods("DELETE")
 	router.HandleFunc("/v1/logDirectories/{id}/start", startMonitoring).Methods("POST")
@@ -124,10 +125,35 @@ func addDirectory(w  http.ResponseWriter, r *http.Request){
 	}
 	log.Info("Add directory in Request", logDirectoryToAdd)
 
-	id, addErr := utils.AddLogDirectory(logDirectoryToAdd)
+	id, addErr := utils.SaveLogDirectory(logDirectoryToAdd)
 	if addErr != nil {
 		log.Error("Error while adding a directory - ", addErr)
 		http.Error(w, addErr.Error(), http.StatusBadRequest)
+	}else {
+		fmt.Fprintf(w, strconv.Itoa(id))
+	}
+}
+
+func updateDirectory(w  http.ResponseWriter, r *http.Request){
+	log.Info("Invoked PUT /v1/logDirectories API")
+	reqBody,err := ioutil.ReadAll(r.Body)
+	if err != nil {
+		http.Error(w, "Cannot read body", http.StatusBadRequest)
+	}
+
+	logDirectoryToUpdate := utils.LogDirectory{}
+	err = json.Unmarshal(reqBody, &logDirectoryToUpdate)
+	if err != nil {
+		log.Error("Invalid Json for updateDirectory API ", string(reqBody), err)
+		http.Error(w, "Cannot unmarshal json", http.StatusBadRequest)
+		return
+	}
+	log.Info("Update directory in Request", logDirectoryToUpdate)
+
+	id, updateErr := utils.SaveLogDirectory(logDirectoryToUpdate)
+	if updateErr != nil {
+		log.Error("Error while updating a directory - ", updateErr)
+		http.Error(w, updateErr.Error(), http.StatusBadRequest)
 	}else {
 		fmt.Fprintf(w, strconv.Itoa(id))
 	}

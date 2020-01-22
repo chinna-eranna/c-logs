@@ -1,6 +1,6 @@
 import * as types from './actionTypes';
 import * as _async from 'async'
-import {monitorHostLogs, getLogDirectories, startMonitoring, getLogMessages, searchInApp, resetMonitoring, getFiles} from '../services/appLogServices'
+import {monitorHostLogs, getLogDirectories,createLogDirectory,saveLogDirectory, startMonitoring, getLogMessages, searchInApp, resetMonitoring, getFiles} from '../services/appLogServices'
 
 export function monitorHost(host){
     return dispatch => {
@@ -28,10 +28,31 @@ export function fetchApplications(){
             dispatch({type: types.APPLICATIONS_LIST, payload: response.data});
         }, function(err){
             console.log("Error while fetching the applications, show error to user");
-        })
+        });
     }
 }
 
+export function addNewApplicationLog(name, logDirectory, logFilePattern){
+    return dispatch => {
+        console.log("Name: " + name + " LogDirectory: " + logDirectory + " logFilePattern:  " + logFilePattern);
+        createLogDirectory(name, logDirectory,  logFilePattern).then(function(response){
+            console.log("Log Directory created");
+        }, function(err){
+            console.log("Log Directory creation failed");
+        });
+    };
+}
+
+export function saveApplicationLog(id, name, logDirectory, logFilePattern){
+    return dispatch => {
+        console.log("Name: " + name + " LogDirectory: " + logDirectory + " logFilePattern:  " + logFilePattern);
+        saveLogDirectory(id, name, logDirectory,  logFilePattern).then(function(response){
+            console.log("Log Directory updated");
+        }, function(err){
+            console.log("Log Directory updation failed: " + err);
+        });
+    };
+}
 
 export function monitorAppLog(app, startLogFile, fullContent, reset){
     return dispatch => {
