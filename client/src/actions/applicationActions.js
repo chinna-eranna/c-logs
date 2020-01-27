@@ -1,6 +1,6 @@
 import * as types from './actionTypes';
 import * as _async from 'async'
-import {monitorHostLogs, getLogDirectories,createLogDirectory,saveLogDirectory, startMonitoring, getLogMessages, searchInApp, resetMonitoring, getFiles} from '../services/appLogServices'
+import {monitorHostLogs, getLogDirectories,createLogDirectory,saveLogDirectory,deleteLogDirectory, startMonitoring, getLogMessages, searchInApp, resetMonitoring, getFiles} from '../services/appLogServices'
 
 export function monitorHost(host){
     return dispatch => {
@@ -8,14 +8,14 @@ export function monitorHost(host){
         const monitorHostPromise = monitorHostLogs(host);
         const fetchApplicationsPromise =  fetchApplications();
         Promise.all([fetchApplicationsPromise, monitorHostPromise]).then(function(response){
-            dispatch({type: types.APPLICATIONS_LIST, payload: response[0].data});
+            dispatch({type: types.LOGSET_LIST, payload: response[0].data});
         }, function(err){
             console.log("Error while fetching the applications, show error to user");
         })
        /* return new Promise((resolve, reject) => {
             resolve(fetchApplications());
         }).then(data => {
-            dispatch({type: types.APPLICATIONS_LIST, payload: data});
+            dispatch({type: types.LOGSET_LIST, payload: data});
         });
         */
     }
@@ -25,43 +25,57 @@ export function fetchApplications(){
     return dispatch => {
         const fetchApplicationsPromise =  getLogDirectories();
         fetchApplicationsPromise.then(function(response){
-            dispatch({type: types.APPLICATIONS_LIST, payload: response.data});
+            console.log("Successfully fetched LogSets definitions")
+            dispatch({type: types.LOGSET_LIST, payload: response.data});
         }, function(err){
             console.log("Error while fetching the applications, show error to user");
         });
     }
 }
 
-export function addNewApplicationLog(name, logDirectory, logFilePattern){
+export function addNewLogSet(name, logDirectory, logFilePattern){
     return dispatch => {
         console.log("Name: " + name + " LogDirectory: " + logDirectory + " logFilePattern:  " + logFilePattern);
         createLogDirectory(name, logDirectory,  logFilePattern).then(function(response){
             console.log("Log Directory created");
+            fetchApplications()(dispatch);
         }, function(err){
             console.log("Log Directory creation failed");
         });
     };
 }
 
-export function saveApplicationLog(id, name, logDirectory, logFilePattern){
+export function saveLogSet(id, name, logDirectory, logFilePattern){
     return dispatch => {
         console.log("Name: " + name + " LogDirectory: " + logDirectory + " logFilePattern:  " + logFilePattern);
         saveLogDirectory(id, name, logDirectory,  logFilePattern).then(function(response){
             console.log("Log Directory updated");
+            fetchApplications()(dispatch);
         }, function(err){
             console.log("Log Directory updation failed: " + err);
         });
     };
 }
 
-export function monitorAppLog(app, startLogFile, fullContent, reset){
+export function  deleteApplicationLog(id){
+    return  dispatch => {
+        deleteLogDirectory(id).then(function(response){
+            console.log("Succesfully deleted log directory");
+            fetchApplications()(dispatch);
+        }, function(err){
+            console.log("Log Directory delete failed: " + err);
+        });
+    }
+}
+
+export function monitorLogSet(app, startLogFile, fullContent, reset){
     return dispatch => {
         //TODO a progress bar should be displayed before starting the monitoring
         startMonitoring(app.Id, startLogFile).then(function(response){
             if(reset){
                 dispatch({type: types.STOP_MONITORING, payload: {'id':app.Id}});
             }
-           dispatch({type: types.MONITOR_APP_LOG, payload: {monitoringApp: app, tail: !fullContent}});
+           dispatch({type: types.MONITOR_LOGSET, payload: {monitoringLogSet: app, tail: !fullContent}});
            if(fullContent){
                console.log("Getting the full conetent of the file ", startLogFile);
                 getLogMessages(app.Id, 'fwd', true).then((response) => {
@@ -200,7 +214,7 @@ export function resetApp(app){
         getFiles(app.Directory, app.LogFilePattern).then(function(response){
             if(response && response.data && response.data != null && response.data.length > 0){
                 dispatch({type: types.FILES_LIST, payload: {filesList: response.data}});
-                dispatch({type: types.RESET_APP, payload:{'name': app.Name}});
+                dispatch({type: types.RESET_MONITOR_LOGSET, payload:{'name': app.Name}});
             }else{
                 console.log("No Files to list");
             }

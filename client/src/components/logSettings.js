@@ -13,7 +13,6 @@ import * as types from '../actions/actionTypes';
 import Switch from "react-switch";
 import * as actions from '../actions/applicationActions'
 import LogSearchSettings from './logSearchSettings'
-import styles from '../css/app.css';
 
 
 export class LogSettings extends Component {
@@ -33,44 +32,44 @@ export class LogSettings extends Component {
     }
    
     handleClearLogs(){
-        this.props.clearLogs(this.props.app.Id);
+        this.props.clearLogs(this.props.monitoringLogSet.Id);
     }
 
     handleReset(){
-        this.props.resetApp(this.props.app);
+        this.props.resetApp(this.props.monitoringLogSet);
     }
 
     handleRemove(){
-        this.setState({'stopMonitoringApp' : true});
+        this.setState({'stopMonitoringLogSet' : true});
     }
 
     handleRemoveNo(){
-        this.setState({'stopMonitoringApp' : false});
+        this.setState({'stopMonitoringLogSet' : false});
     }
     handleRemoveYes(){
-        this.setState({'stopMonitoringApp' : false});
-        this.props.stopMonitoring(this.props.app.Id);
+        this.setState({'stopMonitoringLogSet' : false});
+        this.props.stopMonitoring(this.props.monitoringLogSet.Id);
     }
 
 
     handleSwitch(state) {
         this.state.tail = state
         if(state){
-            this.props.startTail(this.props.app.Id);
+            this.props.startTail(this.props.monitoringLogSet.Id);
             this.setState({tailStartLogsLinesCount: this.props.logsCount});
-            this.continueTail(this.props.app);
+            this.continueTail(this.props.monitoringLogSet);
         }else{
-            this.props.stopTail(this.props.app.Id);
+            this.props.stopTail(this.props.monitoringLogSet.Id);
         }
     }
 
     componentDidUpdate(){
-        if(this.props.app.tail && !this.state.tail){
+        if(this.props.monitoringLogSet.tail && !this.state.tail){
             this.setState({tailStartLogsLinesCount: this.props.logsCount});
-            this.continueTail(this.props.app);
+            this.continueTail(this.props.monitoringLogSet);
         }
         /*
-        if(this.props.app.openSearch){
+        if(this.props.monitoringLogSet.openSearch){
             let node = ReactDOM.findDOMNode(this.refs.inputNode);
             if (node && node.focus instanceof Function) {
                 node.focus();
@@ -81,26 +80,26 @@ export class LogSettings extends Component {
     }
 
     componentDidMount(){
-		if(this.props.app.tail){
+		if(this.props.monitoringLogSet.tail){
             this.setState({tailStartLogsLinesCount: this.props.logsCount});
-            this.continueTail(this.props.app);
+            this.continueTail(this.props.monitoringLogSet);
         }
     }
 
-    continueTail(app){
+    continueTail(monitoringLogSet){
         this.setState({tail: true});
         if(this.state.tailStartLogsLinesCount === undefined){
             this.setState({tailStartLogsLinesCount: this.props.logsCount});
         }
         if((this.props.logsCount - this.state.tailStartLogsLinesCount) >= 200){
-            this.props.stopTail(app.Id);
+            this.props.stopTail(monitoringLogSet.Id);
             this.setState({tail: false});
             return;
         }else{
-            this.props.getMoreLogs(app);
+            this.props.getMoreLogs(monitoringLogSet);
             setTimeout(() => {
-                if(this.props.app.tail){
-                    this.continueTail(app);
+                if(this.props.monitoringLogSet.tail){
+                    this.continueTail(monitoringLogSet);
                 }
             }, 100);
         }
@@ -109,13 +108,13 @@ export class LogSettings extends Component {
    
     render(){
         let modalDialog = '';
-        if(this.state.stopMonitoringApp){
+        if(this.state.stopMonitoringLogSet){
             modalDialog  =  (
-            <Modal show={this.state.stopMonitoringApp} onHide={this.handleRemoveNo} centered>
+            <Modal show={this.state.stopMonitoringLogSet} onHide={this.handleRemoveNo} centered>
             <Modal.Header closeButton>
             <Modal.Title><div style={{color:'black'}}>Confirmation</div></Modal.Title>
             </Modal.Header>
-            <Modal.Body><div style={{color:'black'}}>Stop Monitoring Application {this.props.app.Name} ?</div></Modal.Body>
+            <Modal.Body><div style={{color:'black'}}>Stop Monitoring LogSet {this.props.monitoringLogSet.Name} ?</div></Modal.Body>
             <Modal.Footer>
             <Button variant="danger" size="sm" onClick={this.handleRemoveNo}>
                 No
@@ -131,10 +130,10 @@ export class LogSettings extends Component {
         if(this.props.view  === 'logs'){
             tailAndActionsContent = (
                 <div style={{marginLeft: 'auto', display:'flex'}}>
-                    <div style={{paddingRight: '0.5rem', borderRight: 'yellow 1px dashed'}}><b>File:</b> {this.props.app.currentFile}</div>
+                    <div style={{paddingRight: '0.5rem', borderRight: 'yellow 1px dashed'}}><b>File:</b> {this.props.monitoringLogSet.currentFile}</div>
                     <div style={{paddingLeft: '0.5rem', paddingRight: '0.5rem'}}><b>Tail:</b></div>
                     <Switch
-                        checked={this.props.app.tail}
+                        checked={this.props.monitoringLogSet.tail}
                         onChange={this.handleSwitch}
                         onColor="#86d3ff"
                         onHandleColor="#2693e6"
@@ -167,7 +166,7 @@ export class LogSettings extends Component {
         return (
         <div style={{border:'1px dashed black', padding:'0.3rem',borderRadius:'0.0rem 0.0rem .2rem.2rem', marginBottom:'2px', borderColor:'yellow'}}>
             <div style={{display:'flex'}}>
-                <LogSearchSettings app={this.props.app}  logsCount={this.props.app.logsCount} view={this.props.view}/>
+                <LogSearchSettings monitoringLogSet={this.props.monitoringLogSet}  logsCount={this.props.monitoringLogSet.logsCount} view={this.props.view}/>
                 {tailAndActionsContent}
             </div>
             {modalDialog}
@@ -183,13 +182,13 @@ const mapStateToProps = state => {
 
 const mapDispatchToProps = dispatch => {
 	return {
-        clearLogs: (appId) => {dispatch({type: types.CLEAR_LOGS, payload:{'id': appId}});},
-        resetApp: (app) => {dispatch(actions.resetApp(app));},
-        stopMonitoring: (appId) => { dispatch({type: types.STOP_MONITORING, payload: {'id':appId}});},
+        clearLogs: (logsetId) => {dispatch({type: types.CLEAR_LOGS, payload:{'id': logsetId}});},
+        resetApp: (monitoringLogSet) => {dispatch(actions.resetApp(monitoringLogSet));},
+        stopMonitoring: (logsetId) => { dispatch({type: types.STOP_MONITORING, payload: {'id':logsetId}});},
 
-        startTail: (appId) => { dispatch({type: types.START_TAIL, payload: {'id':appId}});},
-        stopTail: (appId) => { dispatch({type: types.STOP_TAIL, payload: {'id':appId}});},
-        getMoreLogs: (app)  => {dispatch(actions.getMoreLogs(app, 'down'));},
+        startTail: (logsetId) => { dispatch({type: types.START_TAIL, payload: {'id':logsetId}});},
+        stopTail: (logsetId) => { dispatch({type: types.STOP_TAIL, payload: {'id':logsetId}});},
+        getMoreLogs: (monitoringLogSet)  => {dispatch(actions.getMoreLogs(monitoringLogSet, 'down'));},
   	};
 };
 

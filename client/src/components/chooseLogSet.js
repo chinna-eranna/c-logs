@@ -17,93 +17,93 @@ import * as types from '../actions/actionTypes';
 import * as actions from '../actions/applicationActions'
 import moment from 'moment'
 import '../css/app.css'
-import ListApplicationLogs from './listApplicationLogs';
-import AddNewApplicationLog from './provisionApplicationLog';
+import ListLogSets from './listLogSets';
+import LogSet from './logSet';
 
 
-export class ChooseApplicationLog extends Component {
+export class ChooseLogSet extends Component {
 
 	constructor(props) {
 		super(props);
 		this.newLogs = 'New Logs';
 		this.allLogs = 'All Logs';
 		this.none = "-None-"
-		this.defaults = { selectApplication: false, selectedApp: this.none, startLogFile:this.newLogs, readFullFileContent:false };
+		this.defaults = { selectLogSet: false, selectedLogSet: this.none, startLogFile:this.newLogs, readFullFileContent:false };
 
-		this.selectApplication = this.selectApplication.bind(this);
+		this.selectLogSet = this.selectLogSet.bind(this);
 		this.selectLog = this.selectLog.bind(this);
-		this.getAvailableApps = this.getAvailableApps.bind(this);
-		this.handleAddAppLog = this.handleAddAppLog.bind(this);
-		this.handleCancelAppLog = this.handleCancelAppLog.bind(this);
-		this.handleCloseListApplicationLogs  =  this.handleCloseListApplicationLogs.bind(this);
-		this.handleCloseAddNewApplicationLog = this.handleCloseAddNewApplicationLog.bind(this);
-		this.handleAddNewAppLog = this.handleAddNewAppLog.bind(this);
-		this.handleEditApplicationLog = this.handleEditApplicationLog.bind(this);
-		this.addApplication = this.addApplication.bind(this);
-		this.listApplicationLogs = this.listApplicationLogs.bind(this);
+		this.getAvailableLogSets = this.getAvailableLogSets.bind(this);
+		this.handleAddOnChooseLogSetModal = this.handleAddOnChooseLogSetModal.bind(this);
+		this.handleCancelOnChooseLogSetModal = this.handleCancelOnChooseLogSetModal.bind(this);
+		this.handleCloseOnListLogSetsModal  =  this.handleCloseOnListLogSetsModal.bind(this);
+		this.handleCloseOnNewLogSetModal = this.handleCloseOnNewLogSetModal.bind(this);
+		this.showAddNewLogSetModal = this.showAddNewLogSetModal.bind(this);
+		this.showEditLogSetModal = this.showEditLogSetModal.bind(this);
+		this.showChooseLogSetModal = this.showChooseLogSetModal.bind(this);
+		this.showListLogSetsModal = this.showListLogSetsModal.bind(this);
 		this.getStartFromContent = this.getStartFromContent.bind(this);
 		this.readFullFileContent = this.readFullFileContent.bind(this);
 		this.handleReadFullFileContent  = this.handleReadFullFileContent.bind(this);
 		this.state = this.defaults;
 		
 	}
-	handleAddAppLog() {
+	handleAddOnChooseLogSetModal() {
 		const reset = this.props.resetApp ? true: false;
 		if(this.props.resetApp){
 			this.props.resetAppDone();
 		}
-		if (this.state.selectedApp === this.none) {
+		if (this.state.selectedLogSet === this.none) {
 			return;
 		}
-		const appToBeMonitored = this.props.availableApps.filter((app, index) => {
-			return app.Name == this.state.selectedApp
+		const logSetToBeMonitored = this.props.availableLogSets.filter((app, index) => {
+			return app.Name == this.state.selectedLogSet
 		});
 		
-		this.props.monitorAppLog(appToBeMonitored[0], this.state.startLogFile, this.state.readFullFileContent, reset);
+		this.props.monitorLogSet(logSetToBeMonitored[0], this.state.startLogFile, this.state.readFullFileContent, reset);
 		this.setState(this.defaults);
 	}
 
-	handleCancelAppLog() {
+	handleCancelOnChooseLogSetModal() {
 		this.setState(this.defaults);
 		if(this.props.resetApp){
 			this.props.resetAppDone();
 		}
 	}
 
-	handleCloseListApplicationLogs(){
+	handleCloseOnListLogSetsModal(){
 		this.setState({ showModalFor: '' });
 	}
-	handleCloseAddNewApplicationLog(){
-		this.setState({showModalFor: 'listApps' });
+	handleCloseOnNewLogSetModal(){
+		this.setState({showModalFor: 'listLogSets' });
 	}
 
-	listApplicationLogs(){
-		this.setState({showModalFor: 'listApps'});
+	showListLogSetsModal(){
+		this.setState({showModalFor: 'listLogSets'});
 	}
 
-	handleAddNewAppLog(){
-		this.setState({showModalFor: 'addNewApplicationLog'});
+	showAddNewLogSetModal(){
+		this.setState({showModalFor: 'addNewLogSet'});
 	}
 
-	handleEditApplicationLog(appId){
-		this.setState({showModalFor: 'editApplicationLog', editAppId:appId});
+	showEditLogSetModal(logsetId){
+		this.setState({showModalFor: 'editLogSet', editLogSetId:logsetId});
 	}
 	
 	handleReadFullFileContent(){
 		this.setState({readFullFileContent:!this.state.readFullFileContent});
 	}
 
-	addApplication() {
-		this.setState({ selectApplication: true });
+	showChooseLogSetModal() {
+		this.setState({ selectLogSet: true });
 	}
 
-	selectApplication(eventKey, event) {
-		this.setState({ selectedApp: eventKey });
-		var selectedApps = this.props.availableApps.filter((app, index) => {
-			return app.Name === eventKey;
+	selectLogSet(eventKey, event) {
+		this.setState({ selectedLogSet: eventKey });
+		var selectedLogSets = this.props.availableLogSets.filter((logSet, index) => {
+			return logSet.Name === eventKey;
 		});
 
-		this.props.getFiles(selectedApps[0].Directory, selectedApps[0].LogFilePattern);
+		this.props.getFiles(selectedLogSets[0].Directory, selectedLogSets[0].LogFilePattern);
 	}
 
 	selectLog(eventKey, event) {
@@ -113,44 +113,44 @@ export class ChooseApplicationLog extends Component {
 	static getDerivedStateFromProps (nextProps, prevState) {
 		if(nextProps && prevState){
 			const newState = prevState;
-			if(nextProps.resetApp && !prevState.selectApplication){
-				newState.selectApplication = true;
-				newState.selectedApp = nextProps.resetApp;
+			if(nextProps.resetApp && !prevState.selectLogSet){
+				newState.selectLogSet = true;
+				newState.selectedLogSet = nextProps.resetApp;
 				return newState;
 			}
 		}
 		return null;
 	}
 
-	getAvailableApps() {
-		let monitoringAppNames = new Set();
-		this.props.monitoringApps.map((app, index) => {
-			monitoringAppNames.add(app.Name);
+	getAvailableLogSets() {
+		let monitoringLogSetNames = new Set();
+		this.props.monitoringLogSets.map((logSet, index) => {
+			monitoringLogSetNames.add(logSet.Name);
 		});
 
-		let availableAppNames = new Set();
-		this.props.availableApps.map((app, index) => {
-			if (!monitoringAppNames.has(app.Name)) {
-				availableAppNames.add(app.Name);
+		let availableLogSetNames = new Set();
+		this.props.availableLogSets.map((logSet, index) => {
+			if (!monitoringLogSetNames.has(logSet.Name)) {
+				availableLogSetNames.add(logSet.Name);
 			}
 		});
 
 
 
-		let availableAppsContent = [];
-		for (let app of availableAppNames) {
-			availableAppsContent.push(<Dropdown.Item size="sm" eventKey={app} key={app}>{app}</Dropdown.Item>);
+		let availableLogSetsContent = [];
+		for (let logSet of availableLogSetNames) {
+			availableLogSetsContent.push(<Dropdown.Item size="sm" eventKey={logSet} key={logSet}>{logSet}</Dropdown.Item>);
 		}
 
-		let addApplicationButton = this.state.selectedApp != this.none ? '' : (<Button variant="warning" onClick={this.handleAddNewAppLog} size="sm" >Add New</Button>);
+		let showChooseLogSetModalButton = this.state.selectedLogSet != this.none ? '' : (<Button variant="warning" onClick={this.showAddNewLogSetModal} size="sm" >Add New</Button>);
 
-		let selectedApp = this.state.selectedApp ? this.state.selectedApp : '-None-';
-		let selectAppContent = ''
+		let selectedLogSet = this.state.selectedLogSet ? this.state.selectedLogSet : '-None-';
+		let selectLogSetContent = ''
 		if(this.props.resetApp){
-			selectAppContent = (
+			selectLogSetContent = (
 				<InputGroup size="sm" className="mb-3">
 					<InputGroup.Prepend>
-						<InputGroup.Text id="basic-addon1">Application</InputGroup.Text>
+						<InputGroup.Text id="basic-addon1">LogSet</InputGroup.Text>
 					</InputGroup.Prepend>
 					<DropdownButton disabled="true" size="sm" as={InputGroup.Prepend} variant="outline-secondary"
 					title={this.props.resetApp} id="input-group-dropdown-1" >
@@ -160,20 +160,20 @@ export class ChooseApplicationLog extends Component {
 					</DropdownButton>
 				</InputGroup>);
 		}else{
-			selectAppContent = (
+			selectLogSetContent = (
 				<div>
 					<InputGroup size="sm" className="mb-3">
 						<InputGroup.Prepend>
-							<InputGroup.Text id="basic-addon1">Application</InputGroup.Text>
+							<InputGroup.Text id="basic-addon1">LogSet</InputGroup.Text>
 						</InputGroup.Prepend>
 						<DropdownButton size="sm" as={InputGroup.Prepend} variant="outline-secondary"
-						title={selectedApp} id="input-group-dropdown-1" onSelect={this.selectApplication} >
+						title={selectedLogSet} id="input-group-dropdown-1" onSelect={this.selectLogSet} >
 							<div style={{maxHeight:'10em', overflowY:  'scroll'}}>
-								{availableAppsContent}
+								{availableLogSetsContent}
 							</div>
 						</DropdownButton>
 					</InputGroup>
-					{addApplicationButton}
+					{showChooseLogSetModalButton}
 				</div>
 			);
 		}
@@ -183,7 +183,7 @@ export class ChooseApplicationLog extends Component {
 		let readFullFileContent = this.readFullFileContent();
 		return (
 			<div>
-				{selectAppContent}
+				{selectLogSetContent}
 				{startFromContent}
 				{readFullFileContent}
 			</div>
@@ -191,7 +191,7 @@ export class ChooseApplicationLog extends Component {
 	}
 
 	getStartFromContent(){
-		if (this.state.selectedApp === '-None-') {
+		if (this.state.selectedLogSet === '-None-') {
 			return '';
 		}
 		
@@ -230,10 +230,10 @@ export class ChooseApplicationLog extends Component {
 		}
 	}
 	render() {
-		const title =  (this.props.resetApp) ? "Reset Monitoring Application" : "Choose Application to view logs";
+		const title =  (this.props.resetApp) ? "Reset Monitoring LogSet" : "Choose LogSet to view logs";
 		const buttonTitle = (this.props.resetApp) ? "Reset" : "Add";
-		let chooseApplicationContent = (
-			<Modal show={true} onHide={this.handleCancelAppLog}
+		let chooseLogSetContent = (
+			<Modal show={true} onHide={this.handleCancelOnChooseLogSetModal}
 				size="lg"
 				aria-labelledby="contained-modal-title-vcenter"
 				centered
@@ -245,53 +245,53 @@ export class ChooseApplicationLog extends Component {
 				</Modal.Header>
 				<Modal.Body>
 					<div>
-						{this.getAvailableApps()}
+						{this.getAvailableLogSets()}
 					</div>
 				</Modal.Body>
 
 				<Modal.Footer>
 					<div style={{ display: 'flex' }}>
-						<Button variant="danger" size="sm" onClick={this.handleCancelAppLog} style={{ marginRight: '10px' }}>Cancel</Button>
-						<Button variant="success" size="sm" onClick={this.handleAddAppLog}>{buttonTitle}</Button>
+						<Button variant="danger" size="sm" onClick={this.handleCancelOnChooseLogSetModal} style={{ marginRight: '10px' }}>Cancel</Button>
+						<Button variant="success" size="sm" onClick={this.handleAddOnChooseLogSetModal}>{buttonTitle}</Button>
 					</div>
 				</Modal.Footer>
 
 			</Modal>
 		);
 
-		let addAppContent = '';
-		if(this.state.showModalFor === 'listApps'){
-			addAppContent  = (<ListApplicationLogs closeHandler={this.handleCloseListApplicationLogs} addNewAppLogHandler={this.handleAddNewAppLog}
-				editApplicationLogHandler={this.handleEditApplicationLog} />)
+		let addLogSetContent = '';
+		if(this.state.showModalFor === 'listLogSets'){
+			addLogSetContent  = (<ListLogSets closeHandler={this.handleCloseOnListLogSetsModal} addNewLogSetHandler={this.showAddNewLogSetModal}
+				editLogSetHandler={this.showEditLogSetModal} />)
 		}
-		else if(this.state.showModalFor === 'addNewApplicationLog' || this.state.showModalFor === 'editApplicationLog'){
-			addAppContent = (<AddNewApplicationLog closeHandler={this.handleCloseAddNewApplicationLog} editAppId={this.state.showModalFor === 'editApplicationLog' ? this.state.editAppId: undefined}/>);
+		else if(this.state.showModalFor === 'addNewLogSet' || this.state.showModalFor === 'editLogSet'){
+			addLogSetContent = (<LogSet closeHandler={this.handleCloseOnNewLogSetModal} editLogSetId={this.state.showModalFor === 'editLogSet' ? this.state.editLogSetId: undefined}/>);
 		}
-		else if (this.state.selectApplication) {
-			addAppContent = chooseApplicationContent;
+		else if (this.state.selectLogSet) {
+			addLogSetContent = chooseLogSetContent;
 		} else {
-			addAppContent =  (
+			addLogSetContent =  (
 				<Dropdown as={ButtonGroup} size="sm">
-					<Button variant="warning" onClick={this.addApplication}>Choose Application</Button>
+					<Button variant="warning" onClick={this.showChooseLogSetModal}>Choose LogSet</Button>
 
 					<Dropdown.Toggle split variant="warning" id="dropdown-split-basic" />
 
 					<Dropdown.Menu>
-						<Dropdown.Item onClick={this.listApplicationLogs}>List Application Logs</Dropdown.Item>
-						<Dropdown.Item onClick={this.handleAddNewAppLog}>Add New Application Log</Dropdown.Item>
+						<Dropdown.Item onClick={this.showListLogSetsModal}>List LogSets </Dropdown.Item>
+						<Dropdown.Item onClick={this.showAddNewLogSetModal}>Add New LogSet</Dropdown.Item>
 					</Dropdown.Menu>
 					</Dropdown>
 			);
 		}
 
-		return addAppContent;
+		return addLogSetContent;
 	}
 }
 
 const mapStateToProps = state => {
 	return {
-		availableApps: state.application.availableApps,
-		monitoringApps: state.application.monitoringApps,
+		availableLogSets: state.application.availableLogSets,
+		monitoringLogSets: state.application.monitoringLogSets,
 		filesList: state.application.filesList,
 		resetApp: state.application.resetApp
 	};
@@ -299,11 +299,11 @@ const mapStateToProps = state => {
 
 const mapDispatchToProps = dispatch => {
 	return {
-		monitorAppLog: (app, startLogFile, readFullFileContent, reset) => { dispatch(actions.monitorAppLog(app, startLogFile, readFullFileContent, reset)); },
-		resetAppDone: () => { dispatch({type: types.RESET_APP_DONE, payload: {}})},
+		monitorLogSet: (logSet, startLogFile, readFullFileContent, reset) => { dispatch(actions.monitorLogSet(logSet, startLogFile, readFullFileContent, reset)); },
+		resetAppDone: () => { dispatch({type: types.RESET_MONITOR_LOGSET_DONE, payload: {}})},
 		getFiles: (directory, pattern) => {dispatch(actions.fetchFiles(directory, pattern)); },
 		clearFilesList: () => {dispatch({type: types.FILES_LIST, payload:{filesList:[]}})}
 	};
 };
 
-export default connect(mapStateToProps, mapDispatchToProps)(ChooseApplicationLog);
+export default connect(mapStateToProps, mapDispatchToProps)(ChooseLogSet);

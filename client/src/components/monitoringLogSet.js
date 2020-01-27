@@ -8,7 +8,7 @@ import OverlayTrigger from 'react-bootstrap/OverlayTrigger'
 import * as types from '../actions/actionTypes';
 import * as actions from '../actions/applicationActions'
 
-export class ApplicationLog extends Component {
+export class MonitoringLogSet extends Component {
 
 	constructor(props) {
         super(props);
@@ -18,22 +18,22 @@ export class ApplicationLog extends Component {
    }
 
     selectLogDir(){
-        this.props.selectApp(this.props.app.Id);
+        this.props.selectApp(this.props.logSet.Id);
     }
 
     componentDidMount(){
-		if(this.props.app.tail){
+		if(this.props.logSet.tail){
             this.setState({tailStartLogsLinesCount: this.props.logsCount});
-            this.continueTail(this.props.app);
+            this.continueTail(this.props.logSet);
         }
     }
 
     componentDidUpdate(){
-        if(this.props.app.tail && !this.state.tail){
+        if(this.props.logSet.tail && !this.state.tail){
             this.setState({tailStartLogsLinesCount: this.props.logsCount});
-            this.continueTail(this.props.app);
+            this.continueTail(this.props.logSet);
         }
-        if(this.props.app.openSearch){
+        if(this.props.logSet.openSearch){
             let node = ReactDOM.findDOMNode(this.refs.inputNode);
             if (node && node.focus instanceof Function) {
                 node.focus();
@@ -42,20 +42,20 @@ export class ApplicationLog extends Component {
         }
     }
 
-    continueTail(app){
+    continueTail(logSet){
         this.setState({tail: true});
         if(this.state.tailStartLogsLinesCount === undefined){
             this.setState({tailStartLogsLinesCount: this.props.logsCount});
         }
         if((this.props.logsCount - this.state.tailStartLogsLinesCount) >= 200){
-            this.props.stopTail(app.Id);
+            this.props.stopTail(logSet.Id);
             this.setState({tail: false});
             return;
         }else{
-            this.props.getMoreLogs(app);
+            this.props.getMoreLogs(logSet);
             setTimeout(() => {
-                if(this.props.app.tail){
-                    this.continueTail(app);
+                if(this.props.logSet.tail){
+                    this.continueTail(logSet);
                 }
             }, 100);
         }
@@ -66,14 +66,14 @@ export class ApplicationLog extends Component {
         let backgroundColor = ''
         let textColor = 'white'
         
-        if(this.props.app.Id === this.props.activeAppId){
+        if(this.props.logSet.Id === this.props.activeLogSetId){
             backgroundColor = 'white';
             textColor = 'green'
         }
       
    
         let tailEmoji = ''
-        if(this.props.app.tail){
+        if(this.props.logSet.tail){
             tailEmoji = <div style={{padding:'2px', color:'darkblack'}}>{'🏃'}</div>
         }
 
@@ -82,9 +82,9 @@ export class ApplicationLog extends Component {
             <div>
                 <div>
                     <div >
-                    <OverlayTrigger overlay={<Tooltip id="tooltip-disabled">{this.props.app.Name}</Tooltip>}>
+                    <OverlayTrigger overlay={<Tooltip id="tooltip-disabled">{this.props.logSet.Name}</Tooltip>}>
                         <div style={{display:'flex', border:'2px solid black', marginTop:'0.5rem',  borderRadius:'.2rem', padding:'2px', cursor:'pointer', background:backgroundColor, color: textColor, fontSize:'.875rem'}}>
-                            <div style={{flexGrow:'1', textAlign:'left', width:'100%', overflow:'hidden', textOverflow:'ellipsis'}} onClick={(e) => this.selectLogDir()}>{this.props.app.Name}</div>
+                            <div style={{flexGrow:'1', textAlign:'left', width:'100%', overflow:'hidden', textOverflow:'ellipsis'}} onClick={(e) => this.selectLogDir()}>{this.props.logSet.Name}</div>
                             {tailEmoji}
                         </div>
                         </OverlayTrigger>
@@ -97,19 +97,19 @@ export class ApplicationLog extends Component {
 
 const mapStateToProps = state => {
 	return {
-        activeAppId: state.application.activeAppId
+        activeLogSetId: state.application.activeLogSetId
 	};
 };
 
 const mapDispatchToProps = dispatch => {
 	return {
-        selectApp:(appId) => { dispatch({type: types.SELECT_APP, payload: {'id':appId}});},
-        tail: (app)  => {dispatch(actions.tailContent(app));},
-        startTail: (appId) => { dispatch({type: types.START_TAIL, payload: {'id':appId}});},
-        stopTail: (appId) => { dispatch({type: types.STOP_TAIL, payload: {'id':appId}});},
-        getMoreLogs: (app)  => {dispatch(actions.getMoreLogs(app, 'down'));},
+        selectApp:(logsetId) => { dispatch({type: types.SELECT_LOGSET, payload: {'id':logsetId}});},
+        tail: (logSet)  => {dispatch(actions.tailContent(logSet));},
+        startTail: (logsetId) => { dispatch({type: types.START_TAIL, payload: {'id':logsetId}});},
+        stopTail: (logsetId) => { dispatch({type: types.STOP_TAIL, payload: {'id':logsetId}});},
+        getMoreLogs: (logSet)  => {dispatch(actions.getMoreLogs(logSet, 'down'));},
         openSearchDone: () => {dispatch({type: types.OPEN_SEARCH_DONE, payload: {}})}
 	};
 };
 
-export default connect(mapStateToProps, mapDispatchToProps)(ApplicationLog);
+export default connect(mapStateToProps, mapDispatchToProps)(MonitoringLogSet);

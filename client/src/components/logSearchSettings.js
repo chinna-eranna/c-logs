@@ -31,7 +31,7 @@ export class LogSearchSettings extends Component {
     }
 
     searchTextChangeHandler(evt){
-        this.props.setSearchText(this.props.app.Id,  evt.target.value);
+        this.props.setSearchText(this.props.monitoringLogSet.Id,  evt.target.value);
     }
 
     togglesearchStrType(){
@@ -43,31 +43,31 @@ export class LogSearchSettings extends Component {
     }
 
     search(){
-        if(this.props.app.searchText  && this.props.app.searchText.length > 0){
-            this.props.search(this.props.app, this.state.searchStrType);
+        if(this.props.monitoringLogSet.searchText  && this.props.monitoringLogSet.searchText.length > 0){
+            this.props.search(this.props.monitoringLogSet, this.state.searchStrType);
         }else{
-            console.log("Search is not trigger for app ", this.props.app, "as searchText is null")
+            console.log("Search is not trigger for monitoringLogSet ", this.props.monitoringLogSet, "as searchText is null")
         }
     }
 
 
     moveSearchCursor(action){
-        if(this.props.app.searchCursor === undefined){
-            this.props.moveSearchCursor(this.props.app, 0);
+        if(this.props.monitoringLogSet.searchCursor === undefined){
+            this.props.moveSearchCursor(this.props.monitoringLogSet, 0);
             return;
         }
         switch(action){
             case 'next':
-                this.props.moveSearchCursor(this.props.app, this.props.app.searchCursor + 1);
+                this.props.moveSearchCursor(this.props.monitoringLogSet, this.props.monitoringLogSet.searchCursor + 1);
                 break;
             case 'previous':
-                this.props.moveSearchCursor(this.props.app, this.props.app.searchCursor - 1);
+                this.props.moveSearchCursor(this.props.monitoringLogSet, this.props.monitoringLogSet.searchCursor - 1);
                 break;
             case 'first':
-                this.props.moveSearchCursor(this.props.app, 0);
+                this.props.moveSearchCursor(this.props.monitoringLogSet, 0);
                 break;
             case 'last':
-                this.props.moveSearchCursor(this.props.app, this.props.app.searchResults.length - 1);
+                this.props.moveSearchCursor(this.props.monitoringLogSet, this.props.monitoringLogSet.searchResults.length - 1);
                 break;
             default:
                 console.log("Invalid action");
@@ -77,24 +77,24 @@ export class LogSearchSettings extends Component {
     }
 
     stopSearch(){
-        this.props.stopSearch(this.props.app);
+        this.props.stopSearch(this.props.monitoringLogSet);
     }
 
     componentDidUpdate(prevProps){
-        if(this.props.app.contentViewKey !== this.props.view){
+        if(this.props.monitoringLogSet.contentViewKey !== this.props.view){
             return;
         }
-        if(!this.props.app.filesToSearch){
+        if(!this.props.monitoringLogSet.filesToSearch){
             return;
         }
-        if(this.props.app.nextFileToSearch !== prevProps.app.nextFileToSearch && 
-                this.props.app.nextFileToSearch !== this.state.currentFileToSearch){
+        if(this.props.monitoringLogSet.nextFileToSearch !== prevProps.monitoringLogSet.nextFileToSearch && 
+                this.props.monitoringLogSet.nextFileToSearch !== this.state.currentFileToSearch){
             let currentFileToSearchBeforeStateChange = this.state.currentFileToSearch;
-            this.setState({currentFileToSearch: this.props.app.nextFileToSearch});
-            const nextFileIndex = this.props.app.nextFileToSearch;
-            if(nextFileIndex < this.props.app.filesToSearch.length){
+            this.setState({currentFileToSearch: this.props.monitoringLogSet.nextFileToSearch});
+            const nextFileIndex = this.props.monitoringLogSet.nextFileToSearch;
+            if(nextFileIndex < this.props.monitoringLogSet.filesToSearch.length){
                 //dispatch
-                this.props.searchInFile(this.props.app, nextFileIndex,  this.state.searchStrType);
+                this.props.searchInFile(this.props.monitoringLogSet, nextFileIndex,  this.state.searchStrType);
             }else{
                 console.log("Not dispatching searchInFile");
             }
@@ -106,10 +106,10 @@ export class LogSearchSettings extends Component {
     }
 
     render(){
-        const searchText = this.props.app.searchText  ? this.props.app.searchText :  '';
+        const searchText = this.props.monitoringLogSet.searchText  ? this.props.monitoringLogSet.searchText :  '';
         
         let searchInPrgoressContent = '';
-        if(this.props.app.searchInProgress){ 
+        if(this.props.monitoringLogSet.searchInProgress){ 
             searchInPrgoressContent  = (
                 <div class={styles.searchInProgress}>
                     <div class={styles.loader}></div>
@@ -124,14 +124,14 @@ export class LogSearchSettings extends Component {
         let searchIcon = '';
        
         if (this.props.view === 'logs') {
-            if(this.props.app.searchResults  && this.props.app.searchResults.length > 0){
+            if(this.props.monitoringLogSet.searchResults  && this.props.monitoringLogSet.searchResults.length > 0){
                 searchButtons  = ( <React.Fragment> 
                 <InputGroup.Append>
                     <Button variant="outline-warning" size="sm" onClick={() => this.moveSearchCursor('first')}>|◀</Button>
                     <Button variant="outline-warning" size="sm" onClick={() => this.moveSearchCursor('previous')}>◀</Button>
                     <Button variant="outline-warning" size="sm" onClick={() => this.moveSearchCursor('next')}>▶</Button>
                     <Button variant="outline-warning" size="sm" onClick={() => this.moveSearchCursor('last')}>▶|</Button>
-                    <InputGroup.Text>{this.props.app.searchCursor + 1} (of {this.props.app.searchResults.length} matches) </InputGroup.Text>
+                    <InputGroup.Text>{this.props.monitoringLogSet.searchCursor + 1} (of {this.props.monitoringLogSet.searchResults.length} matches) </InputGroup.Text>
                 </InputGroup.Append>
                 <div> </div>
                 </React.Fragment>
@@ -160,12 +160,12 @@ export class LogSearchSettings extends Component {
         }
         else{
             let searchingInFile = '';
-            if(this.props.app.searchInProgress && this.props.app.filesToSearch){
-                searchingInFile = (<Form.Label> -- In {this.props.app.filesToSearch[this.props.app.nextFileToSearch].Name} ( {this.props.app.nextFileToSearch +1} of {this.props.app.filesToSearch.length} files)</Form.Label>);
+            if(this.props.monitoringLogSet.searchInProgress && this.props.monitoringLogSet.filesToSearch){
+                searchingInFile = (<Form.Label> -- In {this.props.monitoringLogSet.filesToSearch[this.props.monitoringLogSet.nextFileToSearch].Name} ( {this.props.monitoringLogSet.nextFileToSearch +1} of {this.props.monitoringLogSet.filesToSearch.length} files)</Form.Label>);
             }
             let searchMatches = '';
-            if(this.props.app.searchResults  && this.props.app.searchResults.length > 0){
-                searchMatches =  (<Form.Label> <b>Total Matches:</b> {this.props.app.searchResults.length}</Form.Label>);
+            if(this.props.monitoringLogSet.searchResults  && this.props.monitoringLogSet.searchResults.length > 0){
+                searchMatches =  (<Form.Label> <b>Total Matches:</b> {this.props.monitoringLogSet.searchResults.length}</Form.Label>);
             }
             return (
                 <React.Fragment>
@@ -188,11 +188,11 @@ const mapStateToProps = state => {
 
 const mapDispatchToProps = dispatch => {
 	return {
-        setSearchText: (appId, searchText) =>  {dispatch({type: types.SET_SEARCH_TEXT, payload: {'id' : appId, 'searchText': searchText}})},
-        search:  (app, searchStrType) => {dispatch(actions.search(app, searchStrType));},
-        moveSearchCursor: (app, cursor) => {dispatch(actions.moveSearchCursor(app, cursor));},
-        stopSearch: (app) => {dispatch({type: types.SEARCH_STOP, payload: {id: app.Id}})}, 
-        searchInFile : (app, nextFileToSearch) => {dispatch(actions.searchInFile(app, nextFileToSearch))}  
+        setSearchText: (logsetId, searchText) =>  {dispatch({type: types.SET_SEARCH_TEXT, payload: {'id' : logsetId, 'searchText': searchText}})},
+        search:  (monitoringLogSet, searchStrType) => {dispatch(actions.search(monitoringLogSet, searchStrType));},
+        moveSearchCursor: (monitoringLogSet, cursor) => {dispatch(actions.moveSearchCursor(monitoringLogSet, cursor));},
+        stopSearch: (monitoringLogSet) => {dispatch({type: types.SEARCH_STOP, payload: {id: monitoringLogSet.Id}})}, 
+        searchInFile : (monitoringLogSet, nextFileToSearch) => {dispatch(actions.searchInFile(monitoringLogSet, nextFileToSearch))}  
 	};
 };
 

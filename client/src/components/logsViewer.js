@@ -29,35 +29,35 @@ export class LogsViewer extends Component {
 	}
 
 	loadMoreLogs(page, direction){
-		//if(this.props.activeMonitoringApp[0].tail){
-			this.props.getMoreLogs(this.props.activeMonitoringApp[0], direction);
+		//if(this.props.activeMonitoringLogSet[0].tail){
+			this.props.getMoreLogs(this.props.activeMonitoringLogSet[0], direction);
 		//}else{
 		//	console.log("Tailing is OFF, hence not loading");
 		//}
 	}
 
 	loadNextLogs(){
-		this.props.getMoreLogs(this.props.activeMonitoringApp[0], 'down');
+		this.props.getMoreLogs(this.props.activeMonitoringLogSet[0], 'down');
 	}
 
 	fileInViewPort(visible, file){
 		console.log("VisibilitySensor callback - visibile: " + visible + " file: " + file);
 		if(visible){
-			this.props.setFileInViewPort(this.props.activeMonitoringApp[0], file);
+			this.props.setFileInViewPort(this.props.activeMonitoringLogSet[0], file);
 		}else{
-			this.props.setFileOutOfViewPort(this.props.activeMonitoringApp[0], file);
+			this.props.setFileOutOfViewPort(this.props.activeMonitoringLogSet[0], file);
 		}
 	}
 
 	bookmarkLine(line){
-		this.props.bookmarkLine(this.props.activeMonitoringApp[0], line);
+		this.props.bookmarkLine(this.props.activeMonitoringLogSet[0], line);
 	}
 
 	componentDidMount(){
 	}
 
 	render() {
-		if (this.props.activeMonitoringApp && this.props.activeMonitoringApp.length > 0) {
+		if (this.props.activeMonitoringLogSet && this.props.activeMonitoringLogSet.length > 0) {
 			return (
 				<InfiniteScroll
 					initialLoad={this.state.initialLoad}
@@ -65,38 +65,38 @@ export class LogsViewer extends Component {
 					loadMore={this.loadMoreLogs}
 					hasMore={true}
 					isReverse={this.reverse}
-					loader={this.props.activeMonitoringApp[0].loading ? <div className="loader" key={0}>Loading ...</div> : ''}
+					loader={this.props.activeMonitoringLogSet[0].loading ? <div className="loader" key={0}>Loading ...</div> : ''}
 					useWindow={false}>
 					{this.getLogsToDisplay()}
 				</InfiniteScroll>
 			)
 		} else{
-			return (<div style={{padding:'2px'}}><Container> Please select an application to view logs </Container></div>);
+			return (<div style={{padding:'2px'}}><Container> Please choose a LogSet to view logs </Container></div>);
 		}
 	}
 
 	componentDidUpdate(prevProp){
 		
-		const activeMonitoringApp = this.props.activeMonitoringApp && this.props.activeMonitoringApp.length > 0;
-		if(!activeMonitoringApp){
+		const activeMonitoringLogSet = this.props.activeMonitoringLogSet && this.props.activeMonitoringLogSet.length > 0;
+		if(!activeMonitoringLogSet){
 			return;
 		}
 
-		if( this.props.activeMonitoringApp[0].contentViewKey !== 'logs'){
+		if( this.props.activeMonitoringLogSet[0].contentViewKey !== 'logs'){
 			return;
 		}
-		if(prevProp.activeMonitoringApp && prevProp.activeMonitoringApp.length > 0){
-			if (prevProp.activeMonitoringApp[0].bwdLogsCount != this.props.activeMonitoringApp[0].bwdLogsCount){
+		if(prevProp.activeMonitoringLogSet && prevProp.activeMonitoringLogSet.length > 0){
+			if (prevProp.activeMonitoringLogSet[0].bwdLogsCount != this.props.activeMonitoringLogSet[0].bwdLogsCount){
 				this.reverse = true;
 			}else{
 				this.reverse = false;
 			}
 		}
 
-		if (this.props.activeMonitoringApp[0].scrollToLine && this.props.activeMonitoringApp[0].scrollToLine > 0 && 
-			this.props.logs && this.props.logs.length >= this.props.activeMonitoringApp[0].scrollToLine 
+		if (this.props.activeMonitoringLogSet[0].scrollToLine && this.props.activeMonitoringLogSet[0].scrollToLine > 0 && 
+			this.props.logs && this.props.logs.length >= this.props.activeMonitoringLogSet[0].scrollToLine 
 			&& this.startAfterSearch.current){
-			this.props.resetScrollPosition(this.startAfterSearch.current.offsetTop, this.props.activeMonitoringApp[0]);
+			this.props.resetScrollPosition(this.startAfterSearch.current.offsetTop, this.props.activeMonitoringLogSet[0]);
 			this.startAfterSearch  = createRef();
 		}
 		
@@ -151,10 +151,10 @@ export class LogsViewer extends Component {
 				}
 
 				let logLineHtml = '';
-				if( this.props.activeMonitoringApp[0].scrollToLine && i === this.props.activeMonitoringApp[0].scrollToLine - 1){
+				if( this.props.activeMonitoringLogSet[0].scrollToLine && i === this.props.activeMonitoringLogSet[0].scrollToLine - 1){
 					logLineHtml = <div ref={this.startAfterSearch} className={styles.highlightLine}> {logLine} </div>;
-				}else if(this.props.activeMonitoringApp[0].highlightedLines.indexOf(i - this.props.activeMonitoringApp[0].bwdLogsCount) >= 0){
-					//console.log("Highlighting line with i: " + i + " bwdLogsCount:  " + this.props.activeMonitoringApp[0].bwdLogsCount);
+				}else if(this.props.activeMonitoringLogSet[0].highlightedLines.indexOf(i - this.props.activeMonitoringLogSet[0].bwdLogsCount) >= 0){
+					//console.log("Highlighting line with i: " + i + " bwdLogsCount:  " + this.props.activeMonitoringLogSet[0].bwdLogsCount);
 					logLineHtml = <div className={styles.highlightLine}> {logLine} </div>;
 				}else{
 					logLineHtml = <div className={styles.logLine}> {logLine} </div>;
@@ -164,7 +164,7 @@ export class LogsViewer extends Component {
 					<div className={styles.logLineActions} onClick={this.bookmarkLine.bind(this, i)}>⭐</div>
 					{logLineHtml}</div>);
 			}
-			logsHtml.push(this.props.activeMonitoringApp[0].loading ? '' : <div style={{cursor:'pointer'}} onClick={this.loadNextLogs}>Click to load more..🥃</div>)
+			logsHtml.push(this.props.activeMonitoringLogSet[0].loading ? '' : <div style={{cursor:'pointer'}} onClick={this.loadNextLogs}>Click to load more..🥃</div>)
 			return logsHtml;
 		}else{
 			console.log("No logs yet");
@@ -177,19 +177,19 @@ export class LogsViewer extends Component {
 
 const mapStateToProps = state => {
 	return {
-		activeAppId: state.application.activeAppId,
-		activeMonitoringApp: state.application.monitoringApps.filter(app => app.Id === state.application.activeAppId),
-        logs: state.application["logs_" +  state.application.activeAppId]
+		activeLogSetId: state.application.activeLogSetId,
+		activeMonitoringLogSet: state.application.monitoringLogSets.filter(logSet => logSet.Id === state.application.activeLogSetId),
+        logs: state.application["logs_" +  state.application.activeLogSetId]
 	};
 };
 
 const mapDispatchToProps = dispatch => {
 	return {
-		getMoreLogs: (app, direction)  => {dispatch(actions.getMoreLogs(app, direction));},
-		resetScrollPosition:(topPosition, app) => { dispatch({type: types.RESET_SCROLL_POSITION, payload: {id: app.Id, 'top':topPosition}});},
-		bookmarkLine: (app, line) => {dispatch({type: types.BOOKMARK_LINE, payload: {id: app.Id, line: line}});},
-		setFileInViewPort: (app, file) =>  {dispatch({type: types.FILE_IN_VIEW_PORT, payload: {id: app.Id, file: file}});},
-		setFileOutOfViewPort: (app, file) =>  {dispatch({type: types.FILE_OUT_OF_VIEW_PORT, payload: {id: app.Id, file: file}});}
+		getMoreLogs: (logSet, direction)  => {dispatch(actions.getMoreLogs(logSet, direction));},
+		resetScrollPosition:(topPosition, logSet) => { dispatch({type: types.RESET_SCROLL_POSITION, payload: {id: logSet.Id, 'top':topPosition}});},
+		bookmarkLine: (logSet, line) => {dispatch({type: types.BOOKMARK_LINE, payload: {id: logSet.Id, line: line}});},
+		setFileInViewPort: (logSet, file) =>  {dispatch({type: types.FILE_IN_VIEW_PORT, payload: {id: logSet.Id, file: file}});},
+		setFileOutOfViewPort: (logSet, file) =>  {dispatch({type: types.FILE_OUT_OF_VIEW_PORT, payload: {id: logSet.Id, file: file}});}
 	};
 };
 

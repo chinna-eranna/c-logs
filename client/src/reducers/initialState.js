@@ -29,8 +29,8 @@
  */
 
 export default {
-    availableApps: [],
-    monitoringApps: [],
+    availableLogSets: [],
+    monitoringLogSets: [],
     host: '',
     logs:[],
     highlightedLines:[],
