@@ -48,18 +48,23 @@ export class ChooseLogSet extends Component {
 		
 	}
 	handleAddOnChooseLogSetModal() {
-		const reset = this.props.resetApp ? true: false;
+		const reset = this.props.resetApp;
 		if(this.props.resetApp){
 			this.props.resetAppDone();
 		}
 		if (this.state.selectedLogSet === this.none) {
+			console.log("selectedLogSet is empty");
 			return;
 		}
 		const logSetToBeMonitored = this.props.availableLogSets.filter((app, index) => {
 			return app.Name == this.state.selectedLogSet
 		});
+		if(reset){
+			this.props.monitorLogSetWithReset(logSetToBeMonitored[0], this.state.startLogFile, this.state.readFullFileContent);
+		}else{
+			this.props.monitorLogSet(logSetToBeMonitored[0], this.state.startLogFile, this.state.readFullFileContent);
+		}
 		
-		this.props.monitorLogSet(logSetToBeMonitored[0], this.state.startLogFile, this.state.readFullFileContent, reset);
 		this.setState(this.defaults);
 	}
 
@@ -299,7 +304,8 @@ const mapStateToProps = state => {
 
 const mapDispatchToProps = dispatch => {
 	return {
-		monitorLogSet: (logSet, startLogFile, readFullFileContent, reset) => { dispatch(actions.monitorLogSet(logSet, startLogFile, readFullFileContent, reset)); },
+		monitorLogSetWithReset: (logSet, startLogFile, readFullFileContent) => { dispatch(actions.monitorLogSetWithReset(logSet, startLogFile, readFullFileContent)); },
+		monitorLogSet: (logSet, startLogFile, readFullFileContent) => { dispatch(actions.monitorLogSet(logSet, startLogFile, readFullFileContent)); },
 		resetAppDone: () => { dispatch({type: types.RESET_MONITOR_LOGSET_DONE, payload: {}})},
 		getFiles: (directory, pattern) => {dispatch(actions.fetchFiles(directory, pattern)); },
 		clearFilesList: () => {dispatch({type: types.FILES_LIST, payload:{filesList:[]}})}

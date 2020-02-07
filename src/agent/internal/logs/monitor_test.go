@@ -92,21 +92,21 @@ func testGetLogs_ResetReq(t *testing.T) {
     logs := getLogs("fwd", 50, t)
     validateContent(logs, map[int]string{ 0: "1\n", 49: "50\n", },  t)
     
-    monitoringLogFile := Files[Id]
-    reset := monitoringLogFile.ResetMonitoring(ResetRequest{"testLog1.txt", 30});
+    monitoringLogSet := Files[Id]
+    reset := monitoringLogSet.ResetMonitoring(ResetRequest{"testLog1.txt", 30});
     require.True(t, reset, "Failed reset the log monitoring")
 
     logs = getLogs("fwd", 1, t)
     require.Equal(t, "30\n", logs[0], "Logs[0] is not matching to 30 after reset")
 
     //reset not existing file
-    reset = monitoringLogFile.ResetMonitoring(ResetRequest{"testLog_NotExisting.txt", 30});
+    reset = monitoringLogSet.ResetMonitoring(ResetRequest{"testLog_NotExisting.txt", 30});
     require.False(t, reset, "ResetMonitoring should have failed")
 }
 
 func startMonitoring(from string, filePattern string, t *testing.T){
-    Files =  make(map[int]*MonitoringLogFile)
-    testLogDir := utils.LogDirectory{Id, "logConfName", filePattern, "./_test", ""}
+    Files =  make(map[int]*MonitoringLogSet)
+    testLogDir := utils.LogSet{Id, "logConfName", filePattern, "./_test", ""}
     startMonitoringReq  :=  StartMonitoringRequest{from}
     _,err :=  MonitorLogPath(testLogDir,startMonitoringReq)
     require.Nil(t, err, "Got an error from MonitorLogPath() ", err);
@@ -117,14 +117,14 @@ func startMonitoring(from string, filePattern string, t *testing.T){
 //As the logs reading is in a parallel goroutine, we cannot guarantee the number of logs that it reads,
 //Hence get the logs in loop, and then assert the logs are in proper sequence
 func getLogs(logsType string, minCount int, t  *testing.T)([]string){
-    monitoringLogFile := Files[Id]
+    monitoringLogSet := Files[Id]
     var logs []string
     retries := 0
     for{
         if logsType  == "bwd"{
-            logs = append(logs, monitoringLogFile.GetBwdLogs()...);
+            logs = append(logs, monitoringLogSet.GetBwdLogs()...);
         }else{
-            logs = append(logs, monitoringLogFile.GetFwdLogs()...);
+            logs = append(logs, monitoringLogSet.GetFwdLogs()...);
         }
         if len(logs) >= minCount{
             break;

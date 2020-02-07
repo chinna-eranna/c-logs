@@ -1,6 +1,6 @@
 import * as types from './actionTypes';
 import * as _async from 'async'
-import {monitorHostLogs, getLogDirectories,createLogDirectory,saveLogDirectory,deleteLogDirectory, startMonitoring, getLogMessages, searchInApp, resetMonitoring, getFiles} from '../services/appLogServices'
+import {monitorHostLogs, getLogDirectories,createLogDirectory,saveLogDirectory,deleteLogDirectory,stopMonitoring, startMonitoring, getLogMessages, searchInApp, resetMonitoring, getFiles} from '../services/appLogServices'
 
 export function monitorHost(host){
     return dispatch => {
@@ -68,30 +68,42 @@ export function  deleteApplicationLog(id){
     }
 }
 
-export function monitorLogSet(app, startLogFile, fullContent, reset){
+export function monitorLogSetWithReset(app, startLogFile, fullContent){
     return dispatch => {
         //TODO a progress bar should be displayed before starting the monitoring
-        startMonitoring(app.Id, startLogFile).then(function(response){
-            if(reset){
-                dispatch({type: types.STOP_MONITORING, payload: {'id':app.Id}});
-            }
-           dispatch({type: types.MONITOR_LOGSET, payload: {monitoringLogSet: app, tail: !fullContent}});
-           if(fullContent){
-               console.log("Getting the full conetent of the file ", startLogFile);
-                getLogMessages(app.Id, 'fwd', true).then((response) => {
-                    const logsLinesCount =  logsResponseHandler(app, 'fwd', dispatch, response);
-                    resetMonitoring(app.Id, startLogFile, logsLinesCount+1).then(function(response){
-                        getLogs(app, 'fwd', dispatch);
-                    });
-                });
-           }else{
-                console.log("Invoking getLogs in success response handler of startMonitoring for app  " + JSON.stringify(app)) ; 
-                getLogs(app, 'fwd', dispatch);
-           }
+        stopMonitoring(app.Id).then(function(response){
+            dispatch({type: types.STOP_MONITORING, payload: {'id':app.Id}});
+            startMonitorLogSet(app, startLogFile, fullContent, dispatch);
         }, function(err){
-            console.log("Error while starting the monitoring of an app, show error to user");
-        })
+            console.log("Error while stopping the monitoring of an app, show error to user");
+        });
     }
+}
+export function monitorLogSet(app, startLogFile, fullContent){
+    return dispatch => {
+        //TODO a progress bar should be displayed before starting the monitoring
+        startMonitorLogSet(app, startLogFile, fullContent, dispatch);
+    }
+}
+
+function startMonitorLogSet(app, startLogFile, fullContent, dispatch){
+    startMonitoring(app.Id, startLogFile).then(function(response){
+        dispatch({type: types.MONITOR_LOGSET, payload: {monitoringLogSet: app, tail: !fullContent}});
+        if(fullContent){
+            console.log("Getting the full conetent of the file ", startLogFile);
+             getLogMessages(app.Id, 'fwd', true).then((response) => {
+                 const logsLinesCount =  logsResponseHandler(app, 'fwd', dispatch, response);
+                 resetMonitoring(app.Id, startLogFile, logsLinesCount+1).then(function(response){
+                     getLogs(app, 'fwd', dispatch);
+                 });
+             });
+        }else{
+             console.log("Invoking getLogs in success response handler of startMonitoring for app  " + JSON.stringify(app)) ; 
+             getLogs(app, 'fwd', dispatch);
+        }
+     }, function(err){
+         console.log("Error while starting the monitoring of an app, show error to user");
+     })
 }
 
 export function searchInFile(app, nextFileIndex, searchStrType){
@@ -170,6 +182,51 @@ export function reset(app, file, lineNumber, searchCursor){
             console.log("Error while reset monitoring - ", err);
         });
     }
+}
+
+export function navigateToFile(logset, navigation){
+    return dispatch => {
+        //code is being duplicated?
+        getFiles(logset.Directory, logset.LogFilePattern).then(function(response){
+            console.log(`Got files  for directory ${logset.Directory}`);
+            if(response && response.data && response.data != null && response.data.length > 0){
+                dispatch({type: types.FILES_LIST, payload: {filesList: response.data}});
+                const sortedFileList = _.sortBy(response.data, function(o) { return o.LastModified * -1; })
+                console.log("Sorted FileList:  " + JSON.stringify(sortedFileList) +  " currentFile:    "  +  logset.currentFile + " Navigation: " + navigation);
+                var currentFileObjIndex  = -1;
+                sortedFileList.some((elem, index) => {
+                    console.log("Elem:  " + JSON.stringify(elem));
+                    if(elem.Name === logset.currentFile){
+                        currentFileObjIndex =  index;
+                        return true;
+                    }
+                })
+                if(currentFileObjIndex ==  -1){
+                    console.log("Current viewing file not found");
+                    return;
+                } 
+                if(currentFileObjIndex == 0  && navigation === 'next' || currentFileObjIndex === sortedFileList.length && navigation === 'prev'){
+                    console.log("No next/prev file found");
+                }
+                const fileToNavigate = sortedFileList[navigation === 'next' ? (currentFileObjIndex - 1) : (currentFileObjIndex + 1)];
+                /*
+                const fileToNavigate = sortedFileList.reduce((prevFileObj, currFileObj) => {
+                    if (navigation != 'prev' && prevFileObj.Name != currentFileObj[0].Name)
+                        return prevFileObj;
+                    else
+                        return (navigation  === 'prev') ? (currFileObj.LastModified < prevFileObj.LastModified ? currFileObj :  prevFileObj):
+                        (currFileObj.LastModified > prevFileObj.LastModified?  currFileObj :  prevFileObj);
+                }, currentFileObj[0]);*/
+                console.log("fileToNavigate: " + JSON.stringify(fileToNavigate));
+                
+                monitorLogSetWithReset(logset, fileToNavigate.Name, false)(dispatch);
+            }else{
+                console.log("No Files to list");
+            }
+        }, function(err){
+            console.log(`Error while getFiles for directory ${logset.Directory} - `, err);
+        });
+    };
 }
 
 export function moveSearchCursor(app, cursor){

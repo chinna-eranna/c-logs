@@ -9,7 +9,7 @@ import (
 	"errors"
 )
 
-type LogDirectory struct{
+type LogSet struct{
 	Id int
 	Name string
 	LogFilePattern string
@@ -17,7 +17,7 @@ type LogDirectory struct{
 	LogTimestampPattern string
 }
 
-func GetAll()([]LogDirectory){
+func GetAll()([]LogSet){
 	appHomeDir := GetAppHomeDir()
 	log.Info("AppHomeDirectory:", appHomeDir);
 	
@@ -27,99 +27,99 @@ func GetAll()([]LogDirectory){
 	}
 	log.Info("Got the log dir repo content: ", string(logDirRepoContent))
 	
-	var logDirectories []LogDirectory
-	err = json.Unmarshal(logDirRepoContent, &logDirectories)
+	var logSetArr []LogSet
+	err = json.Unmarshal(logDirRepoContent, &logSetArr)
 	if err != nil {
-		log.Error("Error while reading the log directory repo content")
+		log.Error("Error while reading the logset repo content")
 	}
-	log.Info("Log Directories configured: ", logDirectories)
-	return logDirectories
+	log.Info("LogSets configured: ", logSetArr)
+	return logSetArr
 }
 
-func GetLogDirectory(id int)(LogDirectory){
-	logDirectories := GetAll()
-	index := findLogDirectoryIndex(id, logDirectories)
+func GetLogSet(id int)(LogSet){
+	logSetArr := GetAll()
+	index := findLogSetIndex(id, logSetArr)
 	if index  >= 0 {
-		return logDirectories[index]
+		return logSetArr[index]
 	}else{
-		return LogDirectory{}
+		return LogSet{}
 	}
 }
 
-func findLogDirectoryIndex(id int, logDirectories []LogDirectory)(int){
-	for i, logDirectory  := range logDirectories {
-		if logDirectory.Id == id{
+func findLogSetIndex(id int, logSetArr []LogSet)(int){
+	for i, logSet  := range logSetArr {
+		if logSet.Id == id{
 			return i
 		}
 	}
 	return -1
 }
 
-func SaveLogDirectory(logDirectory LogDirectory) (int, error){
-	logDirectories := GetAll()
-	validateErr := validatelogDirectories(logDirectories, logDirectory)
+func SaveLogSet(logSet LogSet) (int, error){
+	logSetArr := GetAll()
+	validateErr := validatelogSetArr(logSetArr, logSet)
 	if validateErr != nil {
 		return -1, validateErr
 	}
-	if(logDirectory.Id > 0){
-		logDirectoryIndex := findLogDirectoryIndex(logDirectory.Id, logDirectories);
-		if(logDirectories[logDirectoryIndex].Id  !=  logDirectory.Id){
-			log.Error("Didn't find LogDirectory for update. Id: " , logDirectory.Id);
+	if(logSet.Id > 0){
+		logSetIndex := findLogSetIndex(logSet.Id, logSetArr);
+		if(logSetArr[logSetIndex].Id  !=  logSet.Id){
+			log.Error("Didn't find LogSet for update. Id: " , logSet.Id);
 		}
-		logDirectories[logDirectoryIndex].Name = logDirectory.Name
-		logDirectories[logDirectoryIndex].Directory = logDirectory.Directory
-		logDirectories[logDirectoryIndex].LogFilePattern = logDirectory.LogFilePattern
+		logSetArr[logSetIndex].Name = logSet.Name
+		logSetArr[logSetIndex].Directory = logSet.Directory
+		logSetArr[logSetIndex].LogFilePattern = logSet.LogFilePattern
 	}else{
-		logDirectory.Id = getNextId(logDirectories)
-		logDirectories = append(logDirectories, logDirectory)
+		logSet.Id = getNextId(logSetArr)
+		logSetArr = append(logSetArr, logSet)
 	}
-	log.Info("Log Directories after save: ", logDirectories)
+	log.Info("LogSets after save: ", logSetArr)
 
-	err := saveLogDirRepository(logDirectories)
+	err := saveLogDirRepository(logSetArr)
 	if err != nil {
 		return -1, err
 	} 
-	return logDirectory.Id, nil
+	return logSet.Id, nil
 }
 
 
-func RemoveLogDirectory(id int)(error){
-	logDirectories := GetAll()
+func DeleteLogSet(id int)(error){
+	logSetArr := GetAll()
 
-	var updatedLogDirectories []LogDirectory
+	var updatedLogDirectories []LogSet
 	var removed bool
-	for _, logDirectory := range logDirectories{
-		if logDirectory.Id == id{
+	for _, logSet := range logSetArr{
+		if logSet.Id == id{
 			log.Info("Removed the log directory with id ", id)
 			removed = true
 		} else {
-			updatedLogDirectories = append(updatedLogDirectories, logDirectory)
+			updatedLogDirectories = append(updatedLogDirectories, logSet)
 		}
 	}
 	if !removed {
-		log.Info("No log directory found with id ", id);
-		return errors.New("Log directory not found")
+		log.Info("No logset found with id ", id);
+		return errors.New("Logset not found")
 	}
 	return saveLogDirRepository(updatedLogDirectories)
 }
 //TODO This api's execute with an assumption that single user will use this agent on a box.
-func getNextId(logDirectories []LogDirectory)(int){
+func getNextId(logSetArr []LogSet)(int){
 	nextId := 0;
-	for _,logDirectory := range logDirectories {
-		if logDirectory.Id > nextId {
-			nextId = logDirectory.Id
+	for _,logSet := range logSetArr {
+		if logSet.Id > nextId {
+			nextId = logSet.Id
 		}
 	}
 	return nextId + 1;
 }
-func saveLogDirRepository(logDirectories []LogDirectory)(error){
-	logDirRepoContent, err := json.MarshalIndent(logDirectories, " ", " ")
+func saveLogDirRepository(logSetArr []LogSet)(error){
+	logSetRepoContent, err := json.MarshalIndent(logSetArr, " ", " ")
 	if err != nil {
-		log.Error("Could not marshal the log directory repo to json ", err)
+		log.Error("Could not marshal the logset repo to json ", err)
 		return err
 	}
 	appHomeDir := GetAppHomeDir()
-	err = ioutil.WriteFile(filepath.Join(appHomeDir, "clogs.conf"), logDirRepoContent, 0644)
+	err = ioutil.WriteFile(filepath.Join(appHomeDir, "clogs.conf"), logSetRepoContent, 0644)
 	if err != nil {
 		log.Error("Unable to write the log directory repo content", err)
 		return err
@@ -128,26 +128,26 @@ func saveLogDirRepository(logDirectories []LogDirectory)(error){
 	return nil
 }
 
-func validatelogDirectories(logDirectories []LogDirectory, newLogDirectory LogDirectory)(error){
+func validatelogSetArr(logSetArr []LogSet, newLogSet LogSet)(error){
 	/*
-	newLogFilePattern := newLogDirectory.LogFilePattern;
+	newLogFilePattern := newLogSet.LogFilePattern;
 	if len(strings.Split(newLogFilePattern, "*")) < 1 {
-		log.Error("Invalid log file pattern, Max one * is allowed - ", newLogDirectory.Name)
+		log.Error("Invalid log file pattern, Max one * is allowed - ", newLogSet.Name)
 		return errors.New("Invalid log file pattern, Max one * is allowed")
 	}
 	*/
-	for _,logDirectory := range logDirectories {
-		if(newLogDirectory.Id == logDirectory.Id){
+	for _,logSet := range logSetArr {
+		if(newLogSet.Id == logSet.Id){
 			continue
 		}
-		if strings.EqualFold(logDirectory.Name, newLogDirectory.Name) {
-			log.Error("Duplicate name error - ", newLogDirectory.Name)
+		if strings.EqualFold(logSet.Name, newLogSet.Name) {
+			log.Error("Duplicate name error - ", newLogSet.Name)
 			return errors.New("Duplicate name")
 		}
 
-		if(strings.EqualFold(logDirectory.Directory, newLogDirectory.Directory) &&
-			strings.EqualFold(logDirectory.LogFilePattern, newLogDirectory.LogFilePattern)){
-				log.Error("Duplicate dir/logfile error - ", newLogDirectory.Name)
+		if(strings.EqualFold(logSet.Directory, newLogSet.Directory) &&
+			strings.EqualFold(logSet.LogFilePattern, newLogSet.LogFilePattern)){
+				log.Error("Duplicate dir/logfile error - ", newLogSet.Name)
 				return errors.New("Duplicate dir/logfile")
 			}
 	}

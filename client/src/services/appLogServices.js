@@ -14,7 +14,7 @@ function monitorHostLogs(hostIp){
 }
 function  getLogDirectories(){
     return new Promise((resolve, reject) => {
-        axios.get("/v1/logSet").then(function(response){
+        axios.get("/v1/logset").then(function(response){
             resolve(response);
         }).catch(function(err){
             console.log("fetchApplications()::Error from ajax: " + err);
@@ -26,10 +26,10 @@ function  getLogDirectories(){
 function  createLogDirectory(name, directory, logFilePattern){
     return new  Promise((resolve, reject) => {
         const logTimestampPattern = '';
-        axios.post("/v1/logSet", {name, logFilePattern, directory, logTimestampPattern}).then((response) => {
+        axios.post("/v1/logset", {name, logFilePattern, directory, logTimestampPattern}).then((response) => {
             resolve(response);
         }).catch((err) => {
-            console.log("createLogDirectory()::failure response: " + err);
+            console.log("createLogDirectory()1::failure response: " + err);
             reject(err);
         });
     });
@@ -38,7 +38,7 @@ function  createLogDirectory(name, directory, logFilePattern){
 function  saveLogDirectory(id, name, directory, logFilePattern){
     return new  Promise((resolve, reject) => {
         const logTimestampPattern = '';
-        axios.put("/v1/logSet", {id, name, logFilePattern, directory, logTimestampPattern}).then((response) => {
+        axios.put("/v1/logset", {id, name, logFilePattern, directory, logTimestampPattern}).then((response) => {
             resolve(response);
         }).catch((err) => {
             console.log("saveLogDirectory()::failure response: " + err);
@@ -49,7 +49,7 @@ function  saveLogDirectory(id, name, directory, logFilePattern){
 
 function deleteLogDirectory(id){
     return new Promise((resolve, reject) => {
-        axios.delete(`/v1/logSet/${id}`).then((response) => {
+        axios.delete(`/v1/logset/${id}`).then((response) => {
             resolve(response);
         }).catch((err) => {
             console.log("deleteLogDirectory()::failure response: " + err);
@@ -58,14 +58,26 @@ function deleteLogDirectory(id){
     });
 }
 
+function  stopMonitoring(logsetId){
+    return new Promise((resolve, reject) => { 
+        axios.post(`/v1/logset/${logsetId}/stop`).then(function(response){
+        console.log("Stopped monitoring for logset/" + logsetId);
+        resolve(response);
+    }).catch(function(err){
+        console.log("stopMonitoring()::Error from ajax: " + err);
+        reject(err);
+    });
+});
+}
+
 function startMonitoring(logsetId, startFrom){
     return new Promise((resolve, reject) => { 
             //add content-type header
-            axios.post(`/v1/logSet/${logsetId}/start`, {StartFrom: startFrom}).then(function(response){
-            console.log("started monitoring log for logDirectories/" + logsetId);
+            axios.post(`/v1/logset/${logsetId}/start`, {StartFrom: startFrom}).then(function(response){
+            console.log("started monitoring log for logset/" + logsetId);
             resolve(response);
         }).catch(function(err){
-            console.log("getLogs()::Error from ajax: " + err);
+            console.log("startMonitoring()::Error from ajax: " + err);
             reject(err);
         });
     });
@@ -82,7 +94,7 @@ function getLogMessages(logsetId, direction, fullContent){
             }
             //add content-type header
             logMsgRequests[logsetId] = true;
-            const url = (direction === "bwd") ? `/v1/logSet/${logsetId}/logs?bwdLogs=true` : `/v1/logset/${logsetId}/logs?fullContent=${fullContent}`;
+            const url = (direction === "bwd") ? `/v1/logset/${logsetId}/logs?bwdLogs=true` : `/v1/logset/${logsetId}/logs?fullContent=${fullContent}`;
             axios.get(url).then(function(response){
                 resolve(response);
                 logMsgRequests[logsetId]  = false;
@@ -96,7 +108,7 @@ function getLogMessages(logsetId, direction, fullContent){
 
 function searchInApp(logsetId, searchString, searchStrType, files){
     return new Promise((resolve, reject)=> {
-        axios.post(`/v1/logSet/${logsetId}/search`, {SearchString: searchString, Type:searchStrType, Files: files}).then(function(response){
+        axios.post(`/v1/logset/${logsetId}/search`, {SearchString: searchString, Type:searchStrType, Files: files}).then(function(response){
             resolve(response);
         }).catch(function(err){
             reject(err);
@@ -106,7 +118,7 @@ function searchInApp(logsetId, searchString, searchStrType, files){
 
 function resetMonitoring(logsetId, file, lineNumber){
     return new Promise((resolve, reject)=> {
-        axios.post(`/v1/logSet/${logsetId}/reset`, {FileName: file, LineNumber: parseInt(lineNumber)}).then(function(response){
+        axios.post(`/v1/logset/${logsetId}/reset`, {FileName: file, LineNumber: parseInt(lineNumber)}).then(function(response){
             resolve(response);
         }).catch(function(err){
             reject(err);
@@ -128,4 +140,4 @@ function getFiles(directory, filePattern) {
 
 
 
-export {monitorHostLogs, getLogDirectories, createLogDirectory, saveLogDirectory, deleteLogDirectory, startMonitoring, getLogMessages, searchInApp, resetMonitoring, getFiles}
+export {monitorHostLogs, getLogDirectories, createLogDirectory, saveLogDirectory, deleteLogDirectory,stopMonitoring, startMonitoring, getLogMessages, searchInApp, resetMonitoring, getFiles}

@@ -8,6 +8,7 @@ import FormControl from 'react-bootstrap/FormControl'
 import Dropdown from 'react-bootstrap/Dropdown'
 import DropdownButton from 'react-bootstrap/DropdownButton'
 import Modal from 'react-bootstrap/Modal'
+import Form from 'react-bootstrap/Form'
 
 import * as types from '../actions/actionTypes';
 import Switch from "react-switch";
@@ -26,7 +27,8 @@ export class LogSettings extends Component {
         this.handleRemove = this.handleRemove.bind(this);
         this.handleRemoveNo = this.handleRemoveNo.bind(this);
         this.handleRemoveYes = this.handleRemoveYes.bind(this);
-
+        this.handleGoToNextFile = this.handleGoToNextFile.bind(this);
+        this.handleGoToPrevFile = this.handleGoToPrevFile.bind(this);
         this.handleSwitch = this.handleSwitch.bind(this);
        
     }
@@ -49,6 +51,13 @@ export class LogSettings extends Component {
     handleRemoveYes(){
         this.setState({'stopMonitoringLogSet' : false});
         this.props.stopMonitoring(this.props.monitoringLogSet.Id);
+    }
+    handleGoToNextFile(){
+        this.props.goToNextFile(this.props.monitoringLogSet)
+    }
+    handleGoToPrevFile(){
+        console.log("Go to previous file clicked");
+        this.props.goToPrevFile(this.props.monitoringLogSet)
     }
 
 
@@ -130,7 +139,16 @@ export class LogSettings extends Component {
         if(this.props.view  === 'logs'){
             tailAndActionsContent = (
                 <div style={{marginLeft: 'auto', display:'flex'}}>
-                    <div style={{paddingRight: '0.5rem', borderRight: 'yellow 1px dashed'}}><b>File:</b> {this.props.monitoringLogSet.currentFile}</div>
+                    <div style={{paddingRight: '0.5rem', borderRight: 'yellow 1px dashed', display: 'flex'}}>
+                        <InputGroup size="sm">
+                            <Button variant="outline-warning" size="sm" onClick={this.handleGoToPrevFile}>◀</Button>
+                            <InputGroup.Prepend>
+                                <InputGroup.Text id="file">File: {this.props.monitoringLogSet.currentFile}</InputGroup.Text>
+                            </InputGroup.Prepend>
+                           <Button variant="outline-warning" size="sm" onClick={this.handleGoToNextFile}>▶</Button>
+                        </InputGroup>
+                    </div>
+                    {/*
                     <div style={{paddingLeft: '0.5rem', paddingRight: '0.5rem'}}><b>Tail:</b></div>
                     <Switch
                         checked={this.props.monitoringLogSet.tail}
@@ -147,7 +165,8 @@ export class LogSettings extends Component {
                         className="react-switch"
                         id="material-switch"
                     />
-                    <div style={{marginRight: '1.0rem'}}>
+                    */}
+                    <div style={{marginLeft: '0.5rem', marginRight: '1.0rem'}}>
                         <InputGroup size="sm">
                             <InputGroup.Prepend>
                                 <InputGroup.Text id="basic-addon1">Actions</InputGroup.Text>
@@ -189,6 +208,8 @@ const mapDispatchToProps = dispatch => {
         startTail: (logsetId) => { dispatch({type: types.START_TAIL, payload: {'id':logsetId}});},
         stopTail: (logsetId) => { dispatch({type: types.STOP_TAIL, payload: {'id':logsetId}});},
         getMoreLogs: (monitoringLogSet)  => {dispatch(actions.getMoreLogs(monitoringLogSet, 'down'));},
+        goToPrevFile: (monitoringLogSet) => {dispatch(actions.navigateToFile(monitoringLogSet, 'prev'));},
+        goToNextFile: (monitoringLogSet) => {dispatch(actions.navigateToFile(monitoringLogSet, 'next'));}
   	};
 };
 

@@ -191,7 +191,7 @@ func GunzipFile(gzFilePath, dstFilePath string) (int64, error) {
     if err != nil {
         return 0, fmt.Errorf("Failed to open file %s for unpack: %s", gzFilePath, err)
     }
-    dstFile, err := os.OpenFile(dstFilePath, os.O_CREATE|os.O_WRONLY, 0660)
+    dstFile, err := os.OpenFile(dstFilePath, os.O_TRUNC|os.O_CREATE|os.O_WRONLY, 0660)
     if err != nil {
         return 0, fmt.Errorf("Failed to create destination file %s for unpack: %s", dstFilePath, err)
     }
@@ -227,7 +227,17 @@ func GunzipFile(gzFilePath, dstFilePath string) (int64, error) {
 func FileSize(dir string, fileName string)(int64){
 	file, err := os.Stat(filepath.Join(dir, fileName));
 	if err != nil {
-		log.Error("Error while reading the size of the file ", err)
+		log.Error("FileSize():Error while reading the size of the file ", err)
+		return 0
+	}
+	// get the size
+	return file.Size()
+}
+
+func AbsFileSize(absfilepath string)(int64){
+	file, err := os.Stat(absfilepath);
+	if err != nil {
+		log.Error("AbsFileSize():Error while reading the size of the file ", err)
 		return 0
 	}
 	// get the size

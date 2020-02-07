@@ -34,7 +34,7 @@ func (logsReader *LogsReader) getLogs(fwdOrBwdType string) [][]string{
 	for linesCount < 50 && !timeout{
 		select{
 		case nextLine := <- logsReader.Lines:
-			log.Debug("Line being consumed ", nextLine)
+			//log.Debug("Line being consumed ", nextLine)
 			linesRead = append(linesRead, nextLine)
 			linesCount++
 		case <- time.After(1 * time.Second):
@@ -63,7 +63,7 @@ func (logsReader *LogsReader) waitForConsuming(){
 		select {
 		case <- logsReader.quitRequestCh:
 			logsReader.quit = true
-			log.Info("Got Quit Request")
+			log.Info("waitForConsuming(): Got Quit Request")
 			break
 		case linesConsumed := <- logsReader.LinesConsumed:
 			logsReader.LinesProduced -= linesConsumed
@@ -128,7 +128,7 @@ func (logsReader *LogsReader) quitOrSleep(sleepTime time.Duration){
 	select{
 	case  <- logsReader.quitRequestCh:
 		logsReader.quit = true
-		log.Info("Got Quit Request")
+		log.Info("quitOrSleep(): Got Quit Request")
 		break
 	case <- time.After(sleepTime):
 		break

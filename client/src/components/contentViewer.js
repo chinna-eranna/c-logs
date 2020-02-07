@@ -61,7 +61,7 @@ export class ContentViewer extends Component {
                     <Tab eventKey="logs" title="Logs">
 						<div style={{height: '95vh', display: 'flex', flexDirection: 'column'}}>
 							<div>
-							<LogSettings app={this.props.activeMonitoringLogSet[0]}  logsCount={this.props.activeMonitoringLogSet[0].logsCount} view="logs"/>
+							<LogSettings monitoringLogSet={this.props.activeMonitoringLogSet[0]}  logsCount={this.props.activeMonitoringLogSet[0].logsCount} view="logs"/>
 							</div>
 							<div ref="elem" id="logsDiv" onScroll={ this.onScrollLogs }  style={{flexGrow: '1', overflow:'auto'}}>
 								<LogsViewer logs={this.props.logs} activeMonitoringLogSet={this.props.activeMonitoringLogSet}/>
@@ -71,7 +71,7 @@ export class ContentViewer extends Component {
                     <Tab eventKey="searchResults" title="Search Results">
 					<div style={{height: '95vh', display: 'flex', flexDirection: 'column'}}>
 							<div>
-							<LogSettings app={this.props.activeMonitoringLogSet[0]}  logsCount={this.props.activeMonitoringLogSet[0].logsCount} view="searchResults"/>
+							<LogSettings monitoringLogSet={this.props.activeMonitoringLogSet[0]}  logsCount={this.props.activeMonitoringLogSet[0].logsCount} view="searchResults"/>
 							</div>
 						<div ref="searchElem" onScroll={ this.onScrollSearch }  style={{flexGrow: '1', overflow:'auto'}}>
 							<SearchResults activeMonitoringLogSet={this.props.activeMonitoringLogSet[0]} />
