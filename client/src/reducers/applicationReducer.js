@@ -24,7 +24,8 @@ export default function application(state = initialState, action){
             monitoringLogSet.displaySettings = false;
             monitoringLogSet.highlightedLines = [];
             monitoringLogSet.contentViewKey  =  'logs';
-            monitoringLogSet.currentFile = 'test.log';
+            monitoringLogSet.currentFile = '-';
+            monitoringLogSet.loadPrevLogs = true;
             monitoringLogSet.logFilesViewState = [];
             newState = dotProp.set(state, 'monitoringLogSets', list => [...list, monitoringLogSet]);
             newState = dotProp.set(newState, 'logs_' + monitoringLogSet.Id, []);
@@ -86,6 +87,12 @@ export default function application(state = initialState, action){
                 const reverseNewLogs = actualNewLogs.reverse();
                 const allLogs=  reverseNewLogs.concat(oldLogs);
                 newState = dotProp.set(newState, 'logs_' + action.payload.id, allLogs);
+                const resetLineNumber = getArrayProperty(newState,  'monitoringLogSets', 'Id', action.payload.id, 'loadPrevLogs')? true: false;
+                newState = updateArrayProperty(newState, 'monitoringLogSets', 'Id', newState.activeLogSetId, 'loadPrevLogs', false);
+                if(resetLineNumber){
+                    newState = updateArrayProperty(newState,  'monitoringLogSets', 'Id', action.payload.id, 'scrollToLine',actualNewLogs.length);
+                    console.log("Setting reset Line number: "  + resetLineNumber);
+                }
             }else{
                 newState = dotProp.merge(state, 'logs_' + action.payload.id, action.payload.logs);
             }

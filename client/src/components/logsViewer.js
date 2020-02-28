@@ -2,6 +2,7 @@ import { Component } from 'react';
 import React, {createRef} from "react";
 import { connect } from 'react-redux';
 import Container from 'react-bootstrap/Container'
+import Button from 'react-bootstrap/Button';
 import Jumbotron from 'react-bootstrap/Jumbotron'
 import InfiniteScroll from 'react-infinite-scroller';
 import { getLogMessages } from '../services/appLogServices';
@@ -19,6 +20,7 @@ export class LogsViewer extends Component {
 		super(props);
 		this.loadMoreLogs = this.loadMoreLogs.bind(this);
 		this.loadNextLogs = this.loadNextLogs.bind(this);
+		this.loadPrevLogs = this.loadPrevLogs.bind(this);
 		this.getLogsToDisplay = this.getLogsToDisplay.bind(this);
 		this.state = {items: [<div>1</div>], initialLoad:false}
 		this.startAfterSearch  = createRef();
@@ -38,6 +40,9 @@ export class LogsViewer extends Component {
 
 	loadNextLogs(){
 		this.props.getMoreLogs(this.props.activeMonitoringLogSet[0], 'down');
+	}
+	loadPrevLogs(){
+		this.props.getMoreLogs(this.props.activeMonitoringLogSet[0], 'up');
 	}
 
 	fileInViewPort(visible, file){
@@ -114,6 +119,7 @@ export class LogsViewer extends Component {
 		const separator = '**************************************';
 		if(this.props.logs){
 			var logsHtml = [];
+			logsHtml.push(this.props.activeMonitoringLogSet[0].loadPrevLogs ?  <div style={{cursor:'pointer'}} onClick={this.loadPrevLogs}><Button variant="outline-warning" size="sm">&lt;&lt;Load Prior Logs</Button></div> : '')
 			var classNameRegEx = new RegExp('\\s(\\w+\\.[\\.\\w]+\\w)\\s', 'g');
 			for(var i = 0; i < this.props.logs.length;  i++){
 				classNameRegEx.lastIndex = 0;

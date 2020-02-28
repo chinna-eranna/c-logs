@@ -168,9 +168,11 @@ export function getMoreLogs(app, direction){
 
 export function reset(app, file, lineNumber, searchCursor){
     return dispatch => {
-        dispatch({type: types.SET_CURRENT_SEARCH_CURSOR, payload: {id: app.Id, searchCursor: searchCursor}})
-        var adjustedLineNumberToLoad = lineNumber > 100 ? lineNumber - 100 : 1;
-        var adjustedLineNumberToScroll = lineNumber > 100 ? 100 : parseInt(lineNumber);
+        if(searchCursor){
+            dispatch({type: types.SET_CURRENT_SEARCH_CURSOR, payload: {id: app.Id, searchCursor: searchCursor}})
+        }
+        var adjustedLineNumberToLoad = lineNumber > 100 ? lineNumber - 100 : (lineNumber  < 0 ? lineNumber : 1);
+        var adjustedLineNumberToScroll = lineNumber > 100 ? 100 : (lineNumber < 0  ? 1 : parseInt(lineNumber));
         resetMonitoring(app.Id, file, adjustedLineNumberToLoad).then(function(response){
             console.log("Successfully reset monitoring");
             dispatch({type: types.CLEAR_LOGS, payload: {id: app.Id}})

@@ -76,7 +76,7 @@ export class LogSet extends Component {
         >
             <Modal.Header closeButton>
                 <Modal.Title id="contained-modal-title-vcenter">
-                    <div style={{color: 'black'}}>Application Log</div>
+                    <div style={{color: 'black'}}>Add New LogSet</div>
                   </Modal.Title>
             </Modal.Header>
             <Modal.Body>

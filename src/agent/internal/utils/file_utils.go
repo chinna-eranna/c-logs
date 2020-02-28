@@ -391,15 +391,84 @@ func FindOffset(dir string, fileName string, lineNumber int)(int64, error){
 	var offset int64
 
 	log.Info("Finding the offset  of line ", lineNumber , " for file ", absFilepath)
+	
+
+	
+	if(lineNumber  < 0){
+		fileSize := AbsFileSize(absFilepath);
+		startOffset := int64(0)
+		if(fileSize > 1000){
+			startOffset = fileSize - int64(1000);
+		}
+		endOffset  := fileSize;
+		for startOffset >=  0 {
+			file,err := os.Open(absFilepath)
+			if err != nil {
+				log.Info("Got error while opening the file ", absFilepath, err)
+				return offset, err
+			}
+			log.Info("Iteration with startOffset: ", startOffset)
+			reader := bufio.NewReader(file)
+			if(startOffset >  0){
+				discarded, err  := reader.Discard(int(startOffset))
+				if err != nil{
+					log.Error("Could not seek into the file  ", absFilepath, " Bytes Discarded: ", discarded, "  Error:  " ,  err)
+					file.Close()
+					return 0,err
+				}
+			}
+			//ignore the first line, as it may not be a full line
+			bytes,err  := reader.ReadBytes('\n')
+			if err != nil{
+				log.Error("Error while finding the offset  in file: ", absFilepath, err)
+				file.Close()
+				return 0,err
+			}
+		
+			startOffset = startOffset  + int64(len(bytes)) + 1
+			nextLineOffset := startOffset;
+			var pointers []int64
+
+			for nextLineOffset < endOffset {
+				pointers = append(pointers, nextLineOffset)
+				bytes,err  := reader.ReadBytes('\n')
+				if bytes !=  nil && len(bytes) > 0 {
+					nextLineOffset  = nextLineOffset + int64(len(bytes))
+				}
+				if err  == io.EOF{
+					break;
+				}
+				if err != nil{
+					log.Error("--Error while finding the offset  in file: ", absFilepath, err)
+					file.Close()
+					return 0,err
+				}
+			}
+			if len(pointers) >= lineNumber * -1 {
+				resultOffset  :=  pointers[len(pointers) - (lineNumber  * -1)]
+				log.Info("Found  Offset ",  resultOffset,  " for  lineNumber ",  lineNumber)
+				file.Close()
+				return resultOffset-1, nil
+			}else{
+				lineNumber = lineNumber + len(pointers)
+				endOffset = startOffset - 1
+				if(startOffset > 1000){
+					startOffset =  startOffset  -  1000
+				}else{
+					startOffset = 0
+				}
+			}
+			file.Close()
+		}
+		return -1,errors.New("could not offset for the give line");
+	}
 	file,err := os.Open(absFilepath)
 	defer file.Close()
 	if err != nil {
 		log.Info("Got error while opening the file ", absFilepath, err)
 		return offset, err
 	}
-
 	reader := bufio.NewReader(file)
-	
 	skippedLines := 0
 	for skippedLines < lineNumber - 1 {
 		bytes,err := reader.ReadBytes('\n');
@@ -408,10 +477,11 @@ func FindOffset(dir string, fileName string, lineNumber int)(int64, error){
 			break
 		}
 		offset = offset +  int64(len(bytes));
+		log.Info("Number of bytes Read: " , len(bytes));
 		skippedLines++
 	}
 	log.Info("Number of lines skipped for reset ", skippedLines, " and offset ", offset)
-	return offset, nil
+	return offset+1, nil
 }
 
 func PopulateBackPointers(dir string, filename string, offset int64, linesBetweenPointers int)(*stack.Stack, error) {

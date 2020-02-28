@@ -9,6 +9,8 @@ import Dropdown from 'react-bootstrap/Dropdown'
 import DropdownButton from 'react-bootstrap/DropdownButton'
 import Modal from 'react-bootstrap/Modal'
 import Form from 'react-bootstrap/Form'
+import Tooltip from 'react-bootstrap/Tooltip'
+import OverlayTrigger from 'react-bootstrap/OverlayTrigger'
 
 import * as types from '../actions/actionTypes';
 import Switch from "react-switch";
@@ -29,6 +31,8 @@ export class LogSettings extends Component {
         this.handleRemoveYes = this.handleRemoveYes.bind(this);
         this.handleGoToNextFile = this.handleGoToNextFile.bind(this);
         this.handleGoToPrevFile = this.handleGoToPrevFile.bind(this);
+        this.handleGoToTopOfFile  = this.handleGoToTopOfFile.bind(this);
+        this.handleGoToEndOfFile  = this.handleGoToEndOfFile.bind(this);
         this.handleSwitch = this.handleSwitch.bind(this);
        
     }
@@ -53,11 +57,19 @@ export class LogSettings extends Component {
         this.props.stopMonitoring(this.props.monitoringLogSet.Id);
     }
     handleGoToNextFile(){
-        this.props.goToNextFile(this.props.monitoringLogSet)
+        this.props.goToNextFile(this.props.monitoringLogSet);
     }
     handleGoToPrevFile(){
         console.log("Go to previous file clicked");
-        this.props.goToPrevFile(this.props.monitoringLogSet)
+        this.props.goToPrevFile(this.props.monitoringLogSet);
+    }
+    handleGoToTopOfFile(){
+        console.log("Go to top of file clicked");
+        this.props.reset(this.props.monitoringLogSet, this.props.monitoringLogSet.currentFile,  1);
+    }
+    handleGoToEndOfFile(){
+        console.log("Go to end of file clicked");
+        this.props.reset(this.props.monitoringLogSet, this.props.monitoringLogSet.currentFile,  -5);
     }
 
 
@@ -88,6 +100,8 @@ export class LogSettings extends Component {
         */
     }
 
+    
+
     componentDidMount(){
 		if(this.props.monitoringLogSet.tail){
             this.setState({tailStartLogsLinesCount: this.props.logsCount});
@@ -95,7 +109,15 @@ export class LogSettings extends Component {
         }
     }
 
-    continueTail(monitoringLogSet){
+    componentWillUnmount(){
+        this.setState({unmount: true});
+    }
+
+    continueTail(monitoringLogSet, delay){
+        console.log("Continuing tail in LogSettings  with delay: ", delay);
+        if(this.state.unmount){
+            return;
+        }
         this.setState({tail: true});
         if(this.state.tailStartLogsLinesCount === undefined){
             this.setState({tailStartLogsLinesCount: this.props.logsCount});
@@ -106,11 +128,12 @@ export class LogSettings extends Component {
             return;
         }else{
             this.props.getMoreLogs(monitoringLogSet);
+            const nextDelay = delay ? ((delay >= 5000) ? delay  : delay + 200) : 100;
             setTimeout(() => {
                 if(this.props.monitoringLogSet.tail){
-                    this.continueTail(monitoringLogSet);
+                    this.continueTail(monitoringLogSet, nextDelay);
                 }
-            }, 100);
+            }, nextDelay);
         }
         
     }
@@ -141,11 +164,22 @@ export class LogSettings extends Component {
                 <div style={{marginLeft: 'auto', display:'flex'}}>
                     <div style={{paddingRight: '0.5rem', borderRight: 'yellow 1px dashed', display: 'flex'}}>
                         <InputGroup size="sm">
-                            <Button variant="outline-warning" size="sm" onClick={this.handleGoToPrevFile}>◀</Button>
+                            <OverlayTrigger  placement="bottom" overlay={<Tooltip id="tooltip-prev">Go To Previous Log File</Tooltip>}>
+                                <Button variant="outline-warning" size="sm" onClick={this.handleGoToPrevFile}>◀</Button>
+                            </OverlayTrigger>
+                            <OverlayTrigger  placement="bottom" overlay={<Tooltip id="tooltip-start">Go To Start Of Log File</Tooltip>}>
+                                <Button variant="outline-warning" size="sm" onClick={this.handleGoToTopOfFile}>▲</Button>
+                            </OverlayTrigger>
                             <InputGroup.Prepend>
                                 <InputGroup.Text id="file">File: {this.props.monitoringLogSet.currentFile}</InputGroup.Text>
                             </InputGroup.Prepend>
-                           <Button variant="outline-warning" size="sm" onClick={this.handleGoToNextFile}>▶</Button>
+
+                            <OverlayTrigger  placement="bottom" overlay={<Tooltip id="tooltip-end">Go To End of Log File</Tooltip>}>
+                                <Button variant="outline-warning" size="sm" onClick={this.handleGoToEndOfFile}>▼</Button>
+                            </OverlayTrigger>
+                            <OverlayTrigger  placement="bottom" overlay={<Tooltip id="tooltip-next">Go To Next Log File</Tooltip>}>
+                                <Button variant="outline-warning" size="sm" onClick={this.handleGoToNextFile}>▶</Button>
+                            </OverlayTrigger>
                         </InputGroup>
                     </div>
                     {/*
@@ -209,7 +243,8 @@ const mapDispatchToProps = dispatch => {
         stopTail: (logsetId) => { dispatch({type: types.STOP_TAIL, payload: {'id':logsetId}});},
         getMoreLogs: (monitoringLogSet)  => {dispatch(actions.getMoreLogs(monitoringLogSet, 'down'));},
         goToPrevFile: (monitoringLogSet) => {dispatch(actions.navigateToFile(monitoringLogSet, 'prev'));},
-        goToNextFile: (monitoringLogSet) => {dispatch(actions.navigateToFile(monitoringLogSet, 'next'));}
+        goToNextFile: (monitoringLogSet) => {dispatch(actions.navigateToFile(monitoringLogSet, 'next'));},
+        reset: (monitoringLogSet, file, lineNumber) => {dispatch(actions.reset(monitoringLogSet, file, lineNumber));}
   	};
 };
 

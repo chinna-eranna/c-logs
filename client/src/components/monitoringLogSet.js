@@ -23,15 +23,15 @@ export class MonitoringLogSet extends Component {
 
     componentDidMount(){
 		if(this.props.logSet.tail){
-            this.setState({tailStartLogsLinesCount: this.props.logsCount});
-            this.continueTail(this.props.logSet);
+           // this.setState({tailStartLogsLinesCount: this.props.logsCount});
+           // this.continueTail(this.props.logSet);
         }
     }
 
     componentDidUpdate(){
         if(this.props.logSet.tail && !this.state.tail){
-            this.setState({tailStartLogsLinesCount: this.props.logsCount});
-            this.continueTail(this.props.logSet);
+            //this.setState({tailStartLogsLinesCount: this.props.logsCount});
+            //this.continueTail(this.props.logSet);
         }
         if(this.props.logSet.openSearch){
             let node = ReactDOM.findDOMNode(this.refs.inputNode);
@@ -43,6 +43,7 @@ export class MonitoringLogSet extends Component {
     }
 
     continueTail(logSet){
+        console.log("Continuing tail in MonitoringLogSet");
         this.setState({tail: true});
         if(this.state.tailStartLogsLinesCount === undefined){
             this.setState({tailStartLogsLinesCount: this.props.logsCount});

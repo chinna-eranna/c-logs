@@ -83,25 +83,25 @@ function startMonitoring(logsetId, startFrom){
     });
 }
 
-var logMsgRequests = {};
+var logMsgRequests = {'fwd':{}, 'bwd':{}};
 
 function getLogMessages(logsetId, direction, fullContent){
     return new Promise((resolve, reject) => { 
-            if(logMsgRequests[logsetId]){
+            if(logMsgRequests[direction][logsetId]){
                 console.log("Throttled getLogMessages for App :" + logsetId);
                 resolve({throttled:true, data:[]});
                 return;
             }
             //add content-type header
-            logMsgRequests[logsetId] = true;
+            logMsgRequests[direction][logsetId] = true;
             const url = (direction === "bwd") ? `/v1/logset/${logsetId}/logs?bwdLogs=true` : `/v1/logset/${logsetId}/logs?fullContent=${fullContent}`;
             axios.get(url).then(function(response){
                 resolve(response);
-                logMsgRequests[logsetId]  = false;
+                logMsgRequests[direction][logsetId]  = false;
             }).catch(function(err){
                 console.log("getLogs()::Error from ajax: " + err);
                 reject(err);
-                logMsgRequests[logsetId] = false;
+                logMsgRequests[direction][logsetId] = false;
             });
     });
 }

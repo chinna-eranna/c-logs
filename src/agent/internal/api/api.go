@@ -13,8 +13,9 @@ import (
 	"path/filepath"
 	"agent/internal/logs"
 	"agent/internal/utils"
-	"github.com/gobuffalo/packr"
+	"github.com/gobuffalo/packr"	
 )
+import _ "net/http/pprof"
 
 func Init(box packr.Box) {
 	
@@ -28,9 +29,15 @@ func Init(box packr.Box) {
 		FullTimestamp: true,
 	})
 	log.SetOutput(f)
-	log.SetOutput(os.Stdout)
-	log.SetLevel(log.DebugLevel)
+	//log.SetOutput(os.Stdout)
+	log.SetLevel(log.InfoLevel)
 	
+	/*
+	log.Info("Starting the server for profiling")
+	go func(){
+	log.Fatal(http.ListenAndServe(":6061", http.DefaultServeMux))
+	}()
+	*/
 	
 	log.Println("Initializing API router")
 	router := mux.NewRouter()
@@ -39,15 +46,18 @@ func Init(box packr.Box) {
 	router.PathPrefix("/static/").Handler(http.StripPrefix("/static/", fileServer))
 	router.HandleFunc("/v1/logset/{id}/logs", getLogs).Queries("fullContent", "{fullContent}").Methods("GET")
 	router.HandleFunc("/v1/logset/{id}/logs", getLogs).Queries("bwdLogs", "{bwdLogs}").Methods("GET")
-	router.HandleFunc("/v1/logSet", addLogSet).Methods("POST")
-	router.HandleFunc("/v1/logSet", updateLogSet).Methods("PUT")
-	router.HandleFunc("/v1/logSet", getAll).Methods("GET")
-	router.HandleFunc("/v1/logSet/{id}", removeDirectory).Methods("DELETE")
-	router.HandleFunc("/v1/logSet/{id}/start", startMonitoring).Methods("POST")
-	router.HandleFunc("/v1/logSet/{id}/search", searchInLogSet).Methods("POST")
-	router.HandleFunc("/v1/logSet/{id}/reset", resetMonitoring).Methods("POST")
+	router.HandleFunc("/v1/logset", addLogSet).Methods("POST")
+	router.HandleFunc("/v1/logset", updateLogSet).Methods("PUT")
+	router.HandleFunc("/v1/logset", getAll).Methods("GET")
+	router.HandleFunc("/v1/logset/{id}", deleteLogSet).Methods("DELETE")
+	router.HandleFunc("/v1/logset/{id}/start", startMonitoring).Methods("POST")
+	router.HandleFunc("/v1/logset/{id}/stop", stopMonitoring).Methods("POST")
+	router.HandleFunc("/v1/logset/{id}/search", searchInLogSet).Methods("POST")
+	router.HandleFunc("/v1/logset/{id}/reset", resetMonitoring).Methods("POST")
 	router.HandleFunc("/v1/files/{rest:.*}", getFiles).Queries("pattern", "{pattern}").Methods("GET")
 	log.Fatal(http.ListenAndServe(":13999", router))
+	
+
 }
 
 func getLogs(w http.ResponseWriter, r *http.Request){
@@ -118,16 +128,16 @@ func addLogSet(w  http.ResponseWriter, r *http.Request){
 		http.Error(w, "Cannot read body", http.StatusBadRequest)
 	}
 
-	logDirectoryToAdd := utils.LogDirectory{}
-	err = json.Unmarshal(reqBody, &logDirectoryToAdd)
+	logSetToAdd := utils.LogSet{}
+	err = json.Unmarshal(reqBody, &logSetToAdd)
 	if err != nil {
 		log.Error("Invalid Json for addLogSet API ", string(reqBody), err)
 		http.Error(w, "Cannot unmarshal json", http.StatusBadRequest)
 		return
 	}
-	log.Info("Add directory in Request", logDirectoryToAdd)
+	log.Info("Add directory in Request", logSetToAdd)
 
-	id, addErr := utils.SaveLogDirectory(logDirectoryToAdd)
+	id, addErr := utils.SaveLogSet(logSetToAdd)
 	if addErr != nil {
 		log.Error("Error while adding a directory - ", addErr)
 		http.Error(w, addErr.Error(), http.StatusBadRequest)
@@ -143,16 +153,16 @@ func updateLogSet(w  http.ResponseWriter, r *http.Request){
 		http.Error(w, "Cannot read body", http.StatusBadRequest)
 	}
 
-	logDirectoryToUpdate := utils.LogDirectory{}
-	err = json.Unmarshal(reqBody, &logDirectoryToUpdate)
+	logSetToUpdate := utils.LogSet{}
+	err = json.Unmarshal(reqBody, &logSetToUpdate)
 	if err != nil {
 		log.Error("Invalid Json for updateLogSet API ", string(reqBody), err)
 		http.Error(w, "Cannot unmarshal json", http.StatusBadRequest)
 		return
 	}
-	log.Info("Update logset in Request", logDirectoryToUpdate)
+	log.Info("Update logset in Request", logSetToUpdate)
 
-	id, updateErr := utils.SaveLogDirectory(logDirectoryToUpdate)
+	id, updateErr := utils.SaveLogSet(logSetToUpdate)
 	if updateErr != nil {
 		log.Error("Error while updating a logset - ", updateErr)
 		http.Error(w, updateErr.Error(), http.StatusBadRequest)
@@ -174,7 +184,7 @@ func getAll(w http.ResponseWriter, r *http.Request){
 	w.Write(logSetsJson)
 }
 
-func removeDirectory(w http.ResponseWriter, r *http.Request){
+func deleteLogSet(w http.ResponseWriter, r *http.Request){
 	log.Info("Invoked DELETE ", r.URL.Path, " API")
 	vars := mux.Vars(r)
 	id, err := strconv.Atoi(vars["id"])
@@ -184,7 +194,7 @@ func removeDirectory(w http.ResponseWriter, r *http.Request){
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-	err = utils.RemoveLogDirectory(id)
+	err = utils.DeleteLogSet(id)
 	if err != nil {
 		log.Error("Error while deleting the logset: Error -  ", err);
 		//TODO  separate error types for user errors vs application  errors.
@@ -215,8 +225,22 @@ func startMonitoring(w http.ResponseWriter, r *http.Request){
 		return
 	}
 
-	logDirectory := utils.GetLogDirectory(id)
-	logs.MonitorLogPath(logDirectory, startMonitoringRequest)
+	logSet := utils.GetLogSet(id)
+	logs.MonitorLogPath(logSet, startMonitoringRequest)
+}
+
+func stopMonitoring(w http.ResponseWriter, r *http.Request){
+	log.Info("Invoked POST ", r.URL.Path, " API")
+	vars := mux.Vars(r)
+	id, err := strconv.Atoi(vars["id"])
+	if err != nil {
+		log.Error("Invalid logset id for stop monitoring: Error -  ", err);
+		//TODO  separate error types for user errors vs application  errors.
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	monitoringLogSet := logs.Files[id]
+	monitoringLogSet.StopMonitoring()
 }
 
 func searchInLogSet(w http.ResponseWriter, r *http.Request){
@@ -243,8 +267,8 @@ func searchInLogSet(w http.ResponseWriter, r *http.Request){
 		return
 	}
 
-	logDirectory := utils.GetLogDirectory(id)
-	results, err := utils.SearchLogs(logDirectory.Directory, logDirectory.LogFilePattern, searchQuery)
+	logSet := utils.GetLogSet(id)
+	results, err := utils.SearchLogs(logSet.Directory, logSet.LogFilePattern, searchQuery)
 	if(err != nil){
 		log.Error("Error while searching for logs - ", err)
 		http.Error(w, err.Error(), http.StatusBadRequest)

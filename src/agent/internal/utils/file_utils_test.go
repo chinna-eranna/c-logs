@@ -107,3 +107,21 @@ func TestFindOffset(t *testing.T){
 	require.Nil(t,  err, "Error while finding the offset", err)
 	require.Equal(t, int64(13), offset,  "Could not get expected offset 4")
 }
+
+func TestFindOffsetReverse(t *testing.T){
+	offsetFile := "./_test/findOffsetReverse.txt"
+	f, _ := createFile(offsetFile, t)
+	//defer after(f, offsetFile)
+
+	for val := 101; val < 900; val++ {
+		_,err := f.WriteString(fmt.Sprintf("%d\n", val));
+		require.Nil(t, err, "Error while writing the content", err);
+	}
+	offset,err := FindOffset("./_test", "findOffsetReverse.txt", -3)
+	require.Nil(t,  err, "Error while finding the offset", err)
+	require.Equal(t, int64(3185), offset,  "Could not get expected offset 3185")
+
+	offset,err = FindOffset("./_test", "findOffsetReverse.txt", -300)
+	require.Nil(t,  err, "Error while finding the offset", err)
+	require.Equal(t, int64(1997), offset,  "Could not get expected offset 1997")
+}
